@@ -1,0 +1,447 @@
+function g_kapeAnalysis(varargin)
+%% Options: subjects
+SID.ANS = {'PILOT_M01', 'PILOT_F03', ...
+           'PILOT_M02', 'PILOT_F04', 'ANS_F05', 'ANS_F06', ...
+           'ANS_M03', 'ANS_M04', 'ANS_F07', 'ANS_F08'};  % Noise interference, 'PILOT_F04'; old paradigm: 'PILOT_F01',
+
+SID.CNS = {'CNS_F01', 'CNS_F02', 'CNS_F03', 'CNS_F04', ...
+           'CNS_F05', 'CNS_F06', 'CNS_F07', ...
+           'CNS_M02', 'CNS_M03', 'CNS_M04', 'CNS_M05', ...
+           'CNS_M06', 'CNS_M07', 'CNS_M08'}; 
+       
+         % Bad formant tracking and old paradigm: 'CNS_M01'   
+
+SID.CWS = {'CWS_F01', 'CWS_F02', 'CWS_F03', 'CWS_F04', ...
+           'CWS_F05', 'CWS_F06', 'CWS_F07', ...
+           'CWS_M01', 'CWS_M02', 'CWS_M03', 'CWS_M04', ...
+           'CWS_M05', 'CWS_M06'};          
+       
+SHIFT_RATIO_SUST_F1 = +0.25;
+SHIFT_RATIO_SUST_F2 = -0.125;
+
+%% Options: colors
+colors.higher = [1, 0, 0];
+colors.lower = [0, 0, 1];
+colors.noPert = [0, 0, 0];
+
+colors.ANS = [0, 0, 0];
+colors.CNS = [0, 0, 1];
+colors.CWS = [1, 0, 0];
+
+FRAME_DUR = 24 / 12000;
+EXT_LEN = 132;
+EXT_BASE_LEN = 49 + 3;
+LEN_RAND_NOPERT = 49;
+LEN_START = 3;
+LEN_RAMP = 18;
+LEN_STAY = 36;
+LEN_END = 18;
+randShiftDirs = {'higher', 'lower'};
+
+FRAME_DUR = 24 / 12000;
+
+%% Process input arguments
+gend = 'both';
+if ~isempty(fsic(varargin, 'maleOnly'))
+    gend = 'male';
+    fprintf(1, 'INFO: including data from only %s subjects\n', gend);
+elseif ~isempty(fsic(varargin, 'femaleOnly'))
+    gend = 'female';
+    fprintf(1, 'INFO: including data from only %s subjects\n', gend);
+end
+
+grps = fields(SID);
+if isequal(gend, 'male') || isequal(gend, 'female')
+    for i1 = 1 : numel(grps)
+        grp = grps{i1};
+        
+        bKeep = zeros(1, numel(SID.(grp)));
+        for i2 = 1 : numel(SID.(grp))
+            idxh = strfind(SID.(grp){i2}, '_');
+            
+            gchar = lower(SID.(grp){i2}(idxh + 1));
+            if isequal(gchar, lower(gend(1)))
+                bKeep(i2) = 1;
+            end
+        end
+        
+        SID.(grp) = SID.(grp)(find(bKeep));
+    end
+end
+
+%%
+g_rndF1TrajChg = struct;
+
+g_extF1_shira = struct;
+g_extF2_shira = struct;
+g_extFp_shira = struct;
+
+g_extF1Chg_shira = struct;
+g_extF2Chg_shira = struct;
+
+gp_extF1Chg_shira = struct;
+gp_extF2Chg_shira = struct;
+gp_extF12Chg_shira = struct;
+
+
+ntp = NaN;
+for i1 = 1 : numel(grps)
+    grp = grps{i1};
+    
+    g_rndF1TrajChg.(grp).higher = [];
+    g_rndF1TrajChg.(grp).lower = [];
+    g_rndF2TrajChg.(grp).higher = [];
+    g_rndF2TrajChg.(grp).lower = [];
+    
+    g_rndFpTrajChg.(grp).higher = [];
+    g_rndFpTrajChg.(grp).lower = [];
+    
+    g_rndFpTrajChgContra.(grp) = [];
+    
+    g_extF1_shira.(grp) = [];
+    g_extF2_shira.(grp) = [];
+    g_extFp_shira.(grp) = [];
+    
+    g_extF1Chg_shira.(grp) = [];
+    g_extF2Chg_shira.(grp) = [];
+    
+    gp_extF1Chg_shira.(grp) = [];
+    gp_extF2Chg_shira.(grp) = [];
+    
+    for i2 = 1 : numel(SID.(grp))
+        sID = SID.(grp){i2};
+        
+        
+        out = analyzeKapeData(sID, 'noPlot');   
+%         if i1 == 2 && i2 == 14 % DEBUG
+%             pause(0);
+%         end            
+        if length(out.avg_f1Traj.noPert) ~= length(out.avg_f1Traj.higher) || ...
+           length(out.avg_f1Traj.noPert) ~= length(out.avg_f1Traj.lower) % DEBUG
+            fprintf(2, 'WARNING: Mismatch in vector lengths in out.avg_f1Traj in group %s, subject %s\n', grp, sID);
+        end
+        
+        if ~isempty(find(isnan(out.avg_f1Traj.noPert)))
+            fprintf(2, 'WARNING: NaN found in out.avg_f1Traj in group %s, subject %s\n', grp, sID);
+        end
+        
+        % --- Projection of the rand data --- %
+        flds = fields(out.avg_f1Traj);
+        for i1 = 1 : numel(flds)
+            fld = flds{i1};
+            out.avg_fpTraj.(fld) = proj2PertLine(SHIFT_RATIO_SUST_F1, SHIFT_RATIO_SUST_F2, ...
+                                       out.avg_f1Traj.(fld), out.avg_f2Traj.(fld));
+        end
+        % --- ~Projection of the rand data --- %
+        
+        
+        for i3 = 1 : numel(randShiftDirs)
+            sDir = randShiftDirs{i3};
+            g_rndF1TrajChg.(grp).(sDir) = [g_rndF1TrajChg.(grp).(sDir); ...
+                   (out.avg_f1Traj.(sDir) - out.avg_f1Traj.noPert) ./ out.avg_f1Traj.noPert];
+            g_rndF2TrajChg.(grp).(sDir) = [g_rndF2TrajChg.(grp).lower; ...
+                   (out.avg_f2Traj.(sDir) - out.avg_f2Traj.noPert) ./ out.avg_f2Traj.noPert];
+               
+            g_rndFpTrajChg.(grp).(sDir) = [g_rndFpTrajChg.(grp).(sDir); ...
+                   out.avg_fpTraj.(sDir) - out.avg_fpTraj.noPert];            
+        end
+        
+        g_rndFpTrajChgContra.(grp) = [g_rndFpTrajChgContra.(grp); ...
+                   out.avg_fpTraj.higher - out.avg_fpTraj.lower];
+        
+        g_extF1_shira.(grp) = [g_extF1_shira.(grp); out.sust_prodF1_shira];
+        g_extF2_shira.(grp) = [g_extF2_shira.(grp); out.sust_prodF2_shira];
+        
+        approx_pert_mag = norm([mean(out.sust_prodF1_shira(2 : 3)) * SHIFT_RATIO_SUST_F1, ...
+                                mean(out.sust_prodF2_shira(2 : 3)) * SHIFT_RATIO_SUST_F2]);
+%         g_extFp_shira.(grp) = [g_extFp_shira.(grp); ...
+%                                proj2PertLine(SHIFT_RATIO_SUST_F1, SHIFT_RATIO_SUST_F2, ...
+%                                              out.sust_prodF1_shira, out.sust_prodF2_shira) / approx_pert_mag];
+        g_extFp_shira.(grp) = [g_extFp_shira.(grp); ...
+                               proj2PertLine(SHIFT_RATIO_SUST_F1, SHIFT_RATIO_SUST_F2, ...
+                                             out.sust_prodF1_shira, out.sust_prodF2_shira)];
+        
+        if length(out.extF1s_shira) == EXT_LEN
+            t_f1s = out.extF1s_shira;
+            t_f1c = (t_f1s - nanmean(t_f1s(1 : EXT_BASE_LEN))) / nanmean(t_f1s(1 : EXT_BASE_LEN));
+            t_f2s = out.extF2s_shira;
+            t_f2c = (t_f2s - nanmean(t_f2s(1 : EXT_BASE_LEN))) / nanmean(t_f2s(1 : EXT_BASE_LEN));
+        else
+            t_f1s = [nan(1, EXT_LEN - length(out.extF1s_shira)), out.extF1s_shira];
+            t_f1c = (t_f1s - nanmean(t_f1s(1 : EXT_BASE_LEN))) / nanmean(t_f1s(1 : EXT_BASE_LEN));
+            t_f2s = [nan(1, EXT_LEN - length(out.extF2s_shira)), out.extF2s_shira];
+            t_f2c = (t_f2s - nanmean(t_f2s(1 : EXT_BASE_LEN))) / nanmean(t_f2s(1 : EXT_BASE_LEN));
+        end
+        g_extF1Chg_shira.(grp) = [g_extF1Chg_shira.(grp); t_f1c];
+        g_extF2Chg_shira.(grp) = [g_extF2Chg_shira.(grp); t_f2c];
+        
+        gp_extF1Chg_shira.(grp) = [gp_extF1Chg_shira.(grp); ...
+            (out.sust_prodF1_shira - out.sust_prodF1_shira(1)) / out.sust_prodF1_shira(1)];
+        gp_extF2Chg_shira.(grp) = [gp_extF2Chg_shira.(grp); ...
+            (out.sust_prodF2_shira - out.sust_prodF2_shira(1)) / out.sust_prodF2_shira(1)];
+
+        if isnan(ntp)
+            ntp = length(out.avg_f1Traj.noPert);
+        end
+    end
+    
+    % --- Plot Rand F1, F2, and Fp change trajectories --- %
+    figure('Name', sprintf('rand - F1, F2 & Fp - %s', grp), ...
+           'Position', [100, 100, 1350, 500]);
+       
+	for j1 = 1 : 3 
+        subplot(1, 3, j1);
+
+        if j1 == 1
+            t_dat = g_rndF1TrajChg.(grp);
+            dat_name = 'F1';
+        elseif j1 == 2
+            t_dat = g_rndF2TrajChg.(grp);
+            dat_name = 'F2';
+        else
+            t_dat = g_rndFpTrajChg.(grp);
+            dat_name = 'Fp';
+        end
+        
+        hold on;
+        tAxis = 0 : FRAME_DUR : FRAME_DUR * (ntp - 1);
+        plot(tAxis, zeros(size(tAxis)), '-', 'color', [0.5, 0.5, 0.5]);
+        for i2 = 1 : numel(randShiftDirs)
+            sDir = randShiftDirs{i2};
+            plot(tAxis, nanmean(t_dat.(sDir)), ...
+                 'Color', colors.(sDir), 'LineWidth', 1.5);
+            plot(tAxis, nanmean(t_dat.(sDir)) + nanste1(t_dat.(sDir)), ...
+                 '--', 'Color', colors.(sDir), 'LineWidth', 1);
+            plot(tAxis, nanmean(t_dat.(sDir)) - nanste1(t_dat.(sDir)), ...
+                 '--', 'Color', colors.(sDir), 'LineWidth', 1);
+        end
+        xlabel('Time (s)');
+        ylabel(sprintf('%s change (ratio)', dat_name));
+        title(sprintf('rand - %s - %s', dat_name, grp));
+
+        ezlegend([NaN, 0.6, 0.75, 0.3, 0.2], 0.45, ...
+                 randShiftDirs, {colors.(randShiftDirs{1}), colors.(randShiftDirs{2})}, ...
+                 [12, 12], {'-', '-', '.-'}, {colors.(randShiftDirs{1}), colors.(randShiftDirs{2})}, ...
+                 [1.5, 1.5], [1, 1]);
+    end
+    
+    % --- Plot Rand F2 change trajectories --- %
+%     figure('Name', sprintf('rand - F2 - %s', grp));
+%     subplot(1, 2, 2);
+% 
+%     hold on;
+%     tAxis = 0 : FRAME_DUR : FRAME_DUR * (ntp - 1);
+%     plot(tAxis, zeros(size(tAxis)), '-', 'color', [0.5, 0.5, 0.5]);
+%     for i2 = 1 : numel(randShiftDirs)
+%         sDir = randShiftDirs{i2};
+%         plot(tAxis, nanmean(g_rndF2TrajChg.(grp).(sDir)), ...
+%              'Color', colors.(sDir), 'LineWidth', 1.5);
+%         plot(tAxis, nanmean(g_rndF2TrajChg.(grp).(sDir)) + nanste1(g_rndF2TrajChg.(grp).(sDir)), ...
+%              '--', 'Color', colors.(sDir), 'LineWidth', 1);
+%         plot(tAxis, nanmean(g_rndF2TrajChg.(grp).(sDir)) - nanste1(g_rndF2TrajChg.(grp).(sDir)), ...
+%              '--', 'Color', colors.(sDir), 'LineWidth', 1);
+%     end
+%     xlabel('Time (s)');
+%     ylabel('F2 change (ratio)');
+%     title(sprintf('rand - F2 - %s', grp));
+    
+%     ezlegend([NaN, 0.6, 0.75, 0.3, 0.2], 0.45, ...
+%              randShiftDirs, {colors.(randShiftDirs{1}), colors.(randShiftDirs{2})}, ...
+% 	         [12, 12], {'-', '-', '.-'}, {colors.(randShiftDirs{1}), colors.(randShiftDirs{2})}, ...
+%              [1.5, 1.5], [1, 1]);
+    
+    % --- Plot Sust F1 changes --- %
+    figure('Name', sprintf('sust - F1 - %s', grp), ...
+           'Position', [100, 100, 1200, 500]);
+    subplot(1, 2, 1);
+    hold on;
+    
+    plot([0, EXT_LEN + 1], [0, 0], '-', 'Color', [0.5, 0.5, 0.5]);
+    plot(nanmean(g_extF1Chg_shira.(grp)), '-');
+    plot(nanmean(g_extF1Chg_shira.(grp)) - nanste1(g_extF1Chg_shira.(grp)), ...
+         '--');
+    plot(nanmean(g_extF1Chg_shira.(grp)) + nanste1(g_extF1Chg_shira.(grp)), ...
+         '--');
+    set(gca, 'XLim', [0, EXT_LEN + 1]);
+    ys = get(gca, 'YLim');
+    plot(repmat(LEN_RAND_NOPERT + 0.5, 1, 2), ys, '-', 'Color', [0.5, 0.5, 0.5]);
+    plot(repmat(LEN_RAND_NOPERT + LEN_START + 0.5, 1, 2), ys, '-', 'Color', [0.5, 0.5, 0.5]);
+    plot(repmat(LEN_RAND_NOPERT + LEN_START + LEN_RAMP + 0.5, 1, 2), ys, '-', 'Color', [0.5, 0.5, 0.5]);
+    plot(repmat(LEN_RAND_NOPERT + LEN_START + LEN_RAMP + LEN_STAY + 0.5, 1, 2), ys, '-', 'Color', [0.5, 0.5, 0.5]);
+    xlabel('Trial #');
+    ylabel('Sust. F1 change (fraction)');
+%     plot(repmat(LEN_RAND_NOPERT + LEN_START + LEN_RAMP + LEN_STAY + LEN_END + 1, 1, 2), ys, '-', 'Color', [0.5, 0.5, 0.5]);
+
+    % --- Plot Sust F2 changes --- %
+%     figure('Name', sprintf('sust - F2 - %s', grp));
+    subplot(1, 2, 2);    
+    hold on;
+    
+    plot([0, EXT_LEN + 1], [0, 0], '-', 'Color', [0.5, 0.5, 0.5]);
+    plot(nanmean(g_extF2Chg_shira.(grp)), '-');
+    plot(nanmean(g_extF2Chg_shira.(grp)) - nanste1(g_extF2Chg_shira.(grp)), ...
+         '--');
+    plot(nanmean(g_extF2Chg_shira.(grp)) + nanste1(g_extF2Chg_shira.(grp)), ...
+         '--');
+    set(gca, 'XLim', [0, EXT_LEN + 1]);
+    ys = get(gca, 'YLim');
+    plot(repmat(LEN_RAND_NOPERT + 0.5, 1, 2), ys, '-', 'Color', [0.5, 0.5, 0.5]);
+    plot(repmat(LEN_RAND_NOPERT + LEN_START + 0.5, 1, 2), ys, '-', 'Color', [0.5, 0.5, 0.5]);
+    plot(repmat(LEN_RAND_NOPERT + LEN_START + LEN_RAMP + 0.5, 1, 2), ys, '-', 'Color', [0.5, 0.5, 0.5]);
+    plot(repmat(LEN_RAND_NOPERT + LEN_START + LEN_RAMP + LEN_STAY + 0.5, 1, 2), ys, '-', 'Color', [0.5, 0.5, 0.5]);
+    xlabel('Trial #');
+    ylabel('Sust. F2 change (fraction)');
+    
+    % Combined F1/F2 amount of compensation   
+    gp_extF12Chg_shira.(grp) = nan(size(gp_extF1Chg_shira.(grp)));
+    pertVec = [SHIFT_RATIO_SUST_F1, SHIFT_RATIO_SUST_F2];
+    for k0 = 1 : size(gp_extF12Chg_shira.(grp), 1)
+        for k1 = 1 : size(gp_extF12Chg_shira.(grp), 2)
+            gp_extF12Chg_shira.(grp)(k0, k1) = ...
+                (-pertVec * [gp_extF1Chg_shira.(grp)(k0, k1), gp_extF2Chg_shira.(grp)(k0, k1)]') / norm(pertVec);
+        end
+    end
+     
+    % --- In-phase averages --- %
+    figure('Name', sprintf('sust - F1 & F2 chg - %s', grp), ...
+           'Position', [150, 150, 600, 600]);
+    subplot(4, 1, 1); hold on;
+    errorbar([1 : 4], mean(gp_extF1Chg_shira.(grp)), ste(gp_extF1Chg_shira.(grp)), 'bo-');
+    ylabel('F1 fraction change');
+    plot([0.5, 4.5], [0, 0], '-', 'Color', [0.5, 0.5, 0.5]);
+    set(gca, 'XLim', [0.5, 4.5]);
+    
+    subplot(4, 1, 2); hold on;
+    errorbar([1 : 4], mean(gp_extF2Chg_shira.(grp)), ste(gp_extF2Chg_shira.(grp)), 'bo-');
+    ylabel('F2 fraction change');
+    xlabel('Phase'); 
+    set(gca, 'XTick', [1 : 4], 'XTickLabel', {'Start', 'Ramp', 'Stay', 'End'});
+    plot([0.5, 4.5], [0, 0], '-', 'Color', [0.5, 0.5, 0.5]);
+    set(gca, 'XLim', [0.5, 4.5]);
+    
+    subplot(4, 1, 3); hold on;
+    errorbar([1 : 4], mean(gp_extF12Chg_shira.(grp)), ste(gp_extF12Chg_shira.(grp)), 'bo-');
+    ylabel('Combined F1/F2 compens.');
+    xlabel('Phase'); 
+    set(gca, 'XTick', [1 : 4], 'XTickLabel', {'Start', 'Ramp', 'Stay', 'End'});
+    plot([0.5, 4.5], [0, 0], '-', 'Color', [0.5, 0.5, 0.5]);
+    set(gca, 'XLim', [0.5, 4.5]);
+    
+    subplot(4, 1, 4); hold on;
+    errorbar([1 : 4], mean(g_extFp_shira.(grp)), ste(g_extFp_shira.(grp)), 'bo-');
+end
+
+%% Group comparison: rand. projected F1/F2 compens.
+figure('Name', 'Groups: rand.: projected F1/F2 (Fp) compens.');
+hold on;
+for i1 = 1 : numel(grps)
+    grp = grps{i1};
+    len = size(g_rndFpTrajChgContra.(grp), 2);
+    tAxis = (0 : FRAME_DUR : FRAME_DUR * (len - 1)) * 1e3;
+   
+    plot(tAxis, nanmean(g_rndFpTrajChgContra.(grp)), '-', 'Color', colors.(grp), 'LineWidth', 1.5);
+    plot(tAxis, nanmean(g_rndFpTrajChgContra.(grp)) - nanste1(g_rndFpTrajChgContra.(grp)), ... 
+          '--', 'Color', colors.(grp), 'LineWidth', 0.5);
+	plot(tAxis, nanmean(g_rndFpTrajChgContra.(grp)) + nanste1(g_rndFpTrajChgContra.(grp)), ... 
+          '--', 'Color', colors.(grp), 'LineWidth', 0.5);
+end
+xs = get(gca, 'XLim');
+plot(xs, [0, 0], '-', 'Color', [0.5, 0.5, 0.5]);
+xlabel('Time from vowel onset (ms)');
+ylabel('Fp compensation');
+
+ezlegend([NaN, 0.6, 0.05, 0.3, 0.2], 0.45, ...
+         grps, {colors.(grps{1}), colors.(grps{2}), colors.(grps{3})}, ...
+         [12, 12, 12], {'-', '-', '-'}, {colors.(grps{1}), colors.(grps{2}), colors.(grps{3})}, ...
+         [1.5, 1.5, 1.5], [1, 1, 1]);
+
+%% Group comparison: sust. combined F1/F2 compens.
+figure('Name', 'Groups: sust.: combined F1/F2 compens.');
+hold on;
+for i1 = 1 : numel(grps)
+    grp = grps{i1};
+    errorbar([1 : 4], mean(gp_extF12Chg_shira.(grp)), ste(gp_extF12Chg_shira.(grp)), ...
+             'o-', 'Color', colors.(grp))
+end
+plot([0.5, 4.5], [0, 0], '-', 'Color', [0.5, 0.5, 0.5]);
+set(gca, 'XLim', [0.5, 4.5]);
+xlabel('Phase'); 
+set(gca, 'XTick', [1 : 4], 'XTickLabel', {'Start', 'Ramp', 'Stay', 'End'});
+ylabel('Composite F1/F2 adaptation');
+legend(grps, 'Location', 'Southeast');
+
+
+%% Group comparison: combined F1/F2 compens.
+figure('Name', 'Groups: sust.: combined F1/F2 compens.');
+hold on;
+for i1 = 1 : numel(grps)
+    grp = grps{i1};
+    errorbar([1 : 4], mean(g_extFp_shira.(grp)), ste(g_extFp_shira.(grp)), ...
+             'o-', 'Color', colors.(grp))
+end
+plot([0.5, 4.5], [0, 0], '-', 'Color', [0.5, 0.5, 0.5]);
+set(gca, 'XLim', [0.5, 4.5]);
+xlabel('Phase'); 
+set(gca, 'XTick', [1 : 4], 'XTickLabel', {'Start', 'Ramp', 'Stay', 'End'});
+ylabel('Fp adaptation');
+legend(grps, 'Location', 'Southeast');
+
+%% Write data to an xls file, which can be used by other stats software, e.g., SPSS, SYSTAT
+xlsFNs.sustF1 = sprintf('../data_sets/sust_%s_F1_%dANS_%dCNS_%dCWS.xls', ...
+                        gend(1), ...
+                        size(g_extF1Chg_shira.ANS, 1), ...
+                        size(g_extF1Chg_shira.CNS, 1), ...
+                        size(g_extF1Chg_shira.CWS, 1));
+xlsFNs.sustF2 = sprintf('../data_sets/sust_%s_F2_%dANS_%dCNS_%dCWS.xls', ...
+                        gend(1), ...
+                        size(g_extF1Chg_shira.ANS, 1), ...
+                        size(g_extF1Chg_shira.CNS, 1), ...
+                        size(g_extF1Chg_shira.CWS, 1));
+xlsFNs.sustF12 = sprintf('../data_sets/sust_%s_F12_%dANS_%dCNS_%dCWS.xls', ...
+                        gend(1), ...
+                        size(gp_extF12Chg_shira.ANS, 1), ...
+                        size(gp_extF12Chg_shira.CNS, 1), ...
+                        size(gp_extF12Chg_shira.CWS, 1));
+xlsFNs.sustFp = sprintf('../data_sets/sust_%s_Fp_%dANS_%dCNS_%dCWS.xls', ...
+                        gend(1), ...
+                        size(g_extF1Chg_shira.ANS, 1), ...
+                        size(g_extF1Chg_shira.CNS, 1), ...
+                        size(g_extF1Chg_shira.CWS, 1));
+if ~isdir('../data_sets')
+    mkdir('../data_sets');
+end
+
+                    
+flds = fields(xlsFNs);
+
+for i1 = 1 : numel(flds)
+    fld = flds{i1};
+    
+    if isequal(fld, 'sustF1')
+        meas = g_extF1_shira;
+    elseif isequal(fld, 'sustF2')
+        meas = g_extF2_shira;
+    elseif isequal(fld, 'sustF12')
+        meas = gp_extF12Chg_shira;
+    elseif isequal(fld, 'sustFp')
+        meas = g_extFp_shira;
+    else
+        error('Unexpected field name: %s', fld);
+    end
+    
+    title_row = {'NUMBER', 'GRP$', 'SID$', 'START', 'RAMP', 'STAY', 'END'};
+    nums = num2cell([meas.ANS; meas.CNS; meas.CWS]);
+    sNums = num2cell([1 : size(nums, 1)]');
+    t_SIDs = [SID.ANS'; SID.CNS'; SID.CWS'];
+    grps = [repmat({'ANS'},  size(g_extF1Chg_shira.ANS, 1), 1); 
+            repmat({'CNS'},  size(g_extF1Chg_shira.CNS, 1), 1); 
+            repmat({'CWS'},  size(g_extF1Chg_shira.CWS, 1), 1)];
+        
+	dat = [title_row; [sNums, grps, t_SIDs, nums]];
+    xlswrite(xlsFNs.(fld), dat, 1);
+        
+    if isfile(xlsFNs.(fld))
+        fprintf(1, 'INFO: Wrote %d data to file %s\n', fld, xlsFNs.(fld));
+    end
+end
+return
