@@ -7,13 +7,15 @@ The main program for running a experiment is: run_experiment.m
 
 The main program for data preprocessing (after the completion of an experiment) is: preprocKapeData.m
 
-The main script for data analysis is: analyzeKapedata.m
+The main script for data analysis is: analyzeKapeData.m
 
 
-NOTE: Some programs in this repository dependends on the commonmcode repository, available at:
+NOTE: Some programs in this repository dependend on the commonmcode repository, available at:
+
 https://github.com/shanqing-cai/commonmcode
 
 Acknowledgements:
+
 This project was partly supported by NIH grant R01-DC0007683 (PI: Frank Guenther).
 
 The png images in images/ directory are created by the courtesy of Euphemia Zhang ( https://sites.google.com/site/euphzhang/ ).
