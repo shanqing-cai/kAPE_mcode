@@ -9,7 +9,11 @@ The main program for data preprocessing (after the completion of an experiment) 
 
 The main script for data analysis is: analyzeKapedata.m
 
-Acknowledgement:
+
+NOTE: Some programs in this repository dependends on the commonmcode repository, available at:
+https://github.com/shanqing-cai/commonmcode
+
+Acknowledgements:
 This project was partly supported by NIH grant R01-DC0007683 (PI: Frank Guenther).
 
 The png images in images/ directory are created by the courtesy of Euphemia Zhang ( https://sites.google.com/site/euphzhang/ ).
