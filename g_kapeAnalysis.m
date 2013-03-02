@@ -1,23 +1,38 @@
-function g_kapeAnalysis(varargin)
-%% Options: subjects
-SID.ANS = {'PILOT_M01', 'PILOT_F03', ...
-           'PILOT_M02', 'PILOT_F04', 'ANS_F05', 'ANS_F06', ...
-           'ANS_M03', 'ANS_M04', 'ANS_F07', 'ANS_F08'};  % Noise interference, 'PILOT_F04'; old paradigm: 'PILOT_F01',
-
-SID.CNS = {'CNS_F01', 'CNS_F02', 'CNS_F03', 'CNS_F04', ...
-           'CNS_F05', 'CNS_F06', 'CNS_F07', ...
-           'CNS_M02', 'CNS_M03', 'CNS_M04', 'CNS_M05', ...
-           'CNS_M06', 'CNS_M07', 'CNS_M08'}; 
-       
-         % Bad formant tracking and old paradigm: 'CNS_M01'   
-
-SID.CWS = {'CWS_F01', 'CWS_F02', 'CWS_F03', 'CWS_F04', ...
-           'CWS_F05', 'CWS_F06', 'CWS_F07', ...
-           'CWS_M01', 'CWS_M02', 'CWS_M03', 'CWS_M04', ...
-           'CWS_M05', 'CWS_M06'};          
-       
+function g_kapeAnalysis(subjListFN, varargin)
+%% Constants:
 SHIFT_RATIO_SUST_F1 = +0.25;
 SHIFT_RATIO_SUST_F2 = -0.125;
+
+%% Options: subjects
+% SID.ANS = {'PILOT_M01', 'PILOT_F03', 'PILOT_M02', ...
+%            'ANS_F05', 'ANS_F06', 'ANS_F07', 'ANS_F08', 'ANS_F09', 'ANS_F10','ANS_F11', ...
+%            'ANS_M03', 'ANS_M04', 'ANS_M05', 'ANS_M06'};  
+%          % Noise interference, 'PILOT_F04'; old paradigm: 'PILOT_F01', 'PILOT_F02'
+% 
+% SID.CNS = {'CNS_F01', 'CNS_F02', 'CNS_F03', 'CNS_F04', ...
+%            'CNS_F05', 'CNS_F06', 'CNS_F07', ...
+%            'CNS_M02', 'CNS_M03', 'CNS_M04', 'CNS_M05', ...
+%            'CNS_M06', 'CNS_M07', 'CNS_M08'}; 
+%        
+%          % Bad formant tracking and old paradigm: 'CNS_M01'   
+% 
+% SID.CWS = {'CWS_F01', 'CWS_F02', 'CWS_F03', 'CWS_F04', ...
+%            'CWS_F05', 'CWS_F06', 'CWS_F07', ...
+%            'CWS_M01', 'CWS_M02', 'CWS_M03', 'CWS_M04', ...
+%            'CWS_M05', 'CWS_M06', 'CWS_M06'};
+
+% --- Read subject lists --- %
+sList = read_struct_from_text(subjListFN);
+sgrps = fields(sList);
+SID = struct;
+for i1 = 1 : numel(sgrps)
+    sgrp = sgrps{i1};
+    
+    SID.(sgrp) = splitstring(strrep(sList.(sgrp), ',', ' '));
+    
+    fprintf(1, 'INFO: Subject list file contains %d subjects in group %s\n', ...
+            numel(SID.(sgrp)), sgrp);
+end      
 
 %% Options: colors
 colors.higher = [1, 0, 0];
@@ -441,7 +456,7 @@ for i1 = 1 : numel(flds)
     xlswrite(xlsFNs.(fld), dat, 1);
         
     if isfile(xlsFNs.(fld))
-        fprintf(1, 'INFO: Wrote %d data to file %s\n', fld, xlsFNs.(fld));
+        fprintf(1, 'INFO: Wrote %s data to file %s\n', fld, xlsFNs.(fld));
     end
 end
 return

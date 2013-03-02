@@ -1,0 +1,6 @@
+% Formatting: Separate group name and subject IDs with space and/or tab
+%             Separate subject IDs with _only_ a comma. Do not use spaces.
+%             Use the % (percentage) sign for comments
+ANS     PILOT_M01,PILOT_F03,PILOT_M02,ANS_F05,ANS_F06,ANS_F07,ANS_F08,ANS_F09,ANS_F10,ANS_F11,ANS_M03,ANS_M04,ANS_M05,ANS_M06
+CNS     CNS_F01,CNS_F02,CNS_F03,CNS_F04,CNS_F05,CNS_F06,CNS_F07,CNS_M02,CNS_M03,CNS_M04,CNS_M05,CNS_M06,CNS_M07,CNS_M08
+CWS     CWS_F01,CWS_F02,CWS_F03,CWS_F04,CWS_F05,CWS_F06,CWS_F07,CWS_M01,CWS_M02,CWS_M03,CWS_M04,CWS_M05,CWS_M06,CWS_M06
