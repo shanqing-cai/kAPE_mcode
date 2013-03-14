@@ -54,6 +54,10 @@ nRndNoPert = numel(find(pdata.randData.pertType == 0));
 rndNoPert.prodF1_shira = nan(1, nRndNoPert);
 rndNoPert.prodF2_shira = nan(1, nRndNoPert);
 rndNoPert.rawDataFNs = cell(1, nRndNoPert);
+
+vDur_rand.noPert = nan(1, 0);
+vDur_rand.higher = nan(1, 0);
+vDur_rand.lower = nan(1, 0);
 % f1Mat. = nan(0, TRAJ_N);
 
 nrnp_cnt = 0;
@@ -83,6 +87,8 @@ for i1 = 1 : numel(pdata.randData.rawDataFNs)
         f1Mat.(pert) = [f1Mat.(pert), t_f1Traj];
         f2Mat.(pert) = [f2Mat.(pert), t_f2Traj];   
     end
+    
+    vDur_rand.(pert)(end + 1) = pdata.randData.vowelEnd(i1) - pdata.randData.vowelOnset(i1);
     
     if pdata.randData.pertType(i1) == 0
         if pdata.randData.rating(i1) > 0
@@ -146,6 +152,12 @@ ntTot = ntStart + ntRamp + ntStay + ntEnd;
 sust_prodF1_shira = [];
 sust_prodF2_shira = [];
 
+vDur_sust.all = [];
+vDur_sust.start = [];
+vDur_sust.ramp = [];
+vDur_sust.stay = [];
+vDur_sust_end = [];
+
 hft = nan(1, 2);
 for i1 = 1 : 2
     if i1 == 1
@@ -175,6 +187,13 @@ for i1 = 1 : 2
                              nanmean(pdata.sustData.(meas)(idx_stay)), ...
                              nanmean(pdata.sustData.(meas)(idx_end))];
     end
+    
+    % --- Vowel durations --- %
+    vDur_sust.all = pdata.sustData.vowelEnd - pdata.sustData.vowelOnset;
+    vDur_sust.start = vDur_sust.all(idx_start);
+    vDur_sust.ramp = vDur_sust.all(idx_ramp);
+    vDur_sust.stay = vDur_sust.all(idx_stay);
+    vDur_sust.end = vDur_sust.all(idx_end);
     
     if bPlot
         hft(i1) = figure('Name', measName);
@@ -297,5 +316,8 @@ out.extF1s_shira = extF1s_shira;
 out.extF2s_shira = extF2s_shira;
 out.sust_prodF1_shira = sust_prodF1_shira;
 out.sust_prodF2_shira = sust_prodF2_shira;
+
+out.vDur_rand = vDur_rand;
+out.vDur_sust = vDur_sust;
 
 return
