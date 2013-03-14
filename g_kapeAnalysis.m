@@ -34,7 +34,7 @@ for i1 = 1 : numel(sgrps)
             numel(SID.(sgrp)), sgrp);
 end      
 
-%% Options: colors
+%% Options: colors and other visualization options
 colors.higher = [1, 0, 0];
 colors.lower = [0, 0, 1];
 colors.noPert = [0, 0, 0];
@@ -54,6 +54,8 @@ LEN_END = 18;
 randShiftDirs = {'higher', 'lower'};
 
 FRAME_DUR = 24 / 12000;
+
+barW = 0.5;
 
 %% Process input arguments
 gend = 'both';
@@ -98,10 +100,21 @@ gp_extF1Chg_shira = struct;
 gp_extF2Chg_shira = struct;
 gp_extF12Chg_shira = struct;
 
+meanVDur_rand = struct;
+meanVDur_sust = struct;
+
+% --- Composite F1-F2 compensation under higher and lower perturbations at
+% the last time point --- %
+g_rndFp_comp = struct;
+g_rndF12_comp = struct;
 
 ntp = NaN;
+pertVec = [SHIFT_RATIO_SUST_F1, SHIFT_RATIO_SUST_F2];
 for i1 = 1 : numel(grps)
     grp = grps{i1};
+    
+    meanVDur_rand.(grp) = nan(0, 3); % [noPert, higher, lower]    
+    meanVDur_sust.(grp) = nan(0, 4); % [Start, Ramp, Stay, End]
     
     g_rndF1TrajChg.(grp).higher = [];
     g_rndF1TrajChg.(grp).lower = [];
@@ -112,6 +125,9 @@ for i1 = 1 : numel(grps)
     g_rndFpTrajChg.(grp).lower = [];
     
     g_rndFpTrajChgContra.(grp) = [];
+    
+    g_rndFp_comp.(grp) = [];
+    g_rndF12_comp.(grp) = [];
     
     g_extF1_shira.(grp) = [];
     g_extF2_shira.(grp) = [];
@@ -126,8 +142,10 @@ for i1 = 1 : numel(grps)
     for i2 = 1 : numel(SID.(grp))
         sID = SID.(grp){i2};
         
+        out = analyzeKapeData(sID, 'noPlot');
+        meanVDur_rand.(grp)(end + 1, :) = [nanmean(out.vDur_rand.noPert), nanmean(out.vDur_rand.higher), nanmean(out.vDur_rand.lower)];
+        meanVDur_sust.(grp)(end + 1, :) = [nanmean(out.vDur_sust.start), nanmean(out.vDur_sust.ramp),  nanmean(out.vDur_sust.stay), nanmean(out.vDur_sust.end)];
         
-        out = analyzeKapeData(sID, 'noPlot');   
 %         if i1 == 2 && i2 == 14 % DEBUG
 %             pause(0);
 %         end            
@@ -163,6 +181,10 @@ for i1 = 1 : numel(grps)
         
         g_rndFpTrajChgContra.(grp) = [g_rndFpTrajChgContra.(grp); ...
                    out.avg_fpTraj.higher - out.avg_fpTraj.lower];
+        g_rndFp_comp.(grp)(end + 1) = g_rndFpTrajChgContra.(grp)(end, end);
+        g_rndF12_comp.(grp)(end + 1, :) = pertVec * [(nanmean(out.avg_f1Traj.higher(end - 0 : end)) - nanmean(out.avg_f1Traj.lower(end - 0 : end))) / nanmean(out.avg_f1Traj.noPert), ...
+                                                  (nanmean(out.avg_f2Traj.higher(end - 0 : end)) - nanmean(out.avg_f2Traj.lower(end - 0 : end))) / nanmean(out.avg_f2Traj.noPert)]' ...
+                                       / norm(pertVec);
         
         g_extF1_shira.(grp) = [g_extF1_shira.(grp); out.sust_prodF1_shira];
         g_extF2_shira.(grp) = [g_extF2_shira.(grp); out.sust_prodF2_shira];
@@ -309,7 +331,7 @@ for i1 = 1 : numel(grps)
     
     % Combined F1/F2 amount of compensation   
     gp_extF12Chg_shira.(grp) = nan(size(gp_extF1Chg_shira.(grp)));
-    pertVec = [SHIFT_RATIO_SUST_F1, SHIFT_RATIO_SUST_F2];
+    
     for k0 = 1 : size(gp_extF12Chg_shira.(grp), 1)
         for k1 = 1 : size(gp_extF12Chg_shira.(grp), 2)
             gp_extF12Chg_shira.(grp)(k0, k1) = ...
@@ -346,6 +368,48 @@ for i1 = 1 : numel(grps)
     errorbar([1 : 4], mean(g_extFp_shira.(grp)), ste(g_extFp_shira.(grp)), 'bo-');
 end
 
+%% Descriptive statistics: Duration - rand.
+figure('Name', 'Vowel duration - rand.');
+hold on;
+for i1= 1 : numel(grps)
+    grp = grps{i1};
+    errorbar(1 : 3, ...
+             1e3 * mean(meanVDur_rand.(grp)), ...
+             1e3 * ste(meanVDur_rand.(grp)), ...
+             'Color', colors.(grp));    
+end
+ylabel('Vowel duration (ms) (mean\pm1 SEM)');
+set(gca, 'XLim', [0, 4], 'XTick', [1 : 3], 'XTickLabel', {'noPert', 'higher', 'lower'});
+legend(grps);
+
+%% Descriptive statistics: Duration - rand.
+figure('Name', 'Vowel duration - rand.');
+hold on;
+for i1= 1 : numel(grps)
+    grp = grps{i1};
+    errorbar(1 : 3, ...
+             1e3 * mean(meanVDur_rand.(grp)), ...
+             1e3 * ste(meanVDur_rand.(grp)), ...
+             'Color', colors.(grp));    
+end
+ylabel('Vowel duration (ms) (mean\pm1 SEM)');
+set(gca, 'XLim', [0, 4], 'XTick', [1 : 3], 'XTickLabel', {'noPert', 'higher', 'lower'});
+legend(grps);
+
+%% Descriptive statistics: Duration - sust.
+figure('Name', 'Vowel duration - sust.');
+hold on;
+for i1= 1 : numel(grps)
+    grp = grps{i1};
+    errorbar(1 : 4, ...
+             1e3 * mean(meanVDur_sust.(grp)), ...
+             1e3 * ste(meanVDur_sust.(grp)), ...
+             'Color', colors.(grp));    
+end
+ylabel('Vowel duration (ms) (mean\pm1 SEM)');
+set(gca, 'XLim', [0, 5], 'XTick', [1 : 4], 'XTickLabel', {'Start', 'Ramp', 'Stay', 'End'});
+legend(grps);
+
 %% Group comparison: rand. projected F1/F2 compens.
 figure('Name', 'Groups: rand.: projected F1/F2 (Fp) compens.');
 hold on;
@@ -369,6 +433,18 @@ ezlegend([NaN, 0.6, 0.05, 0.3, 0.2], 0.45, ...
          grps, {colors.(grps{1}), colors.(grps{2}), colors.(grps{3})}, ...
          [12, 12, 12], {'-', '-', '-'}, {colors.(grps{1}), colors.(grps{2}), colors.(grps{3})}, ...
          [1.5, 1.5, 1.5], [1, 1, 1]);
+     
+%% Rand. projected F1 / F2 at the last analysis time point
+figure('Name', sprintf('Groups: rand.: Normalized composite F12 compens. (%.1f ms)', tAxis(end)));
+hold on;
+for i1 = 1 : numel(grps)
+    grp = grps{i1};
+    bar(i1, nanmean(g_rndF12_comp.(grp)), barW, 'EdgeColor', colors.(grp), 'FaceColor', 'none');
+    plot(repmat(i1, 1, 2), nanmean(g_rndF12_comp.(grp)) + [-1, 1] * nanste(g_rndF12_comp.(grp)), ...
+         'Color', 'k');
+end
+set(gca, 'XTick', [1, 2, 3], 'XTickLabel', grps);
+ylabel('Composite F12 compensation to rand. pert. (normalized)');
 
 %% Group comparison: sust. combined F1/F2 compens.
 figure('Name', 'Groups: sust.: combined F1/F2 compens.');
@@ -419,9 +495,24 @@ xlsFNs.sustF12 = sprintf('../data_sets/sust_%s_F12_%dANS_%dCNS_%dCWS.xls', ...
                         size(gp_extF12Chg_shira.CWS, 1));
 xlsFNs.sustFp = sprintf('../data_sets/sust_%s_Fp_%dANS_%dCNS_%dCWS.xls', ...
                         gend(1), ...
-                        size(g_extF1Chg_shira.ANS, 1), ...
-                        size(g_extF1Chg_shira.CNS, 1), ...
-                        size(g_extF1Chg_shira.CWS, 1));
+                        size(g_extFp_shira.ANS, 1), ...
+                        size(g_extFp_shira.CNS, 1), ...
+                        size(g_extFp_shira.CWS, 1));
+xlsFNs.rndF12_comp = sprintf('../data_sets/randF12_comp_%s_%dANS_%dCNS_%dCWS.xls', ...
+                        gend(1), ...
+                        size(g_rndF12_comp.ANS, 1), ...
+                        size(g_rndF12_comp.CNS, 1), ...
+                        size(g_rndF12_comp.CWS, 1));
+xlsFNs.meanVDur_rand = sprintf('../data_sets/meanVDur_rand_%s_%dANS_%dCNS_%dCWS.xls', ...
+                        gend(1), ...
+                        size(meanVDur_rand.ANS, 1), ...
+                        size(meanVDur_rand.CNS, 1), ...
+                        size(meanVDur_rand.CWS, 1));
+xlsFNs.meanVDur_sust = sprintf('../data_sets/meanVDur_sust_%s_%dANS_%dCNS_%dCWS.xls', ...
+                        gend(1), ...
+                        size(meanVDur_sust.ANS, 1), ...
+                        size(meanVDur_sust.CNS, 1), ...
+                        size(meanVDur_sust.CWS, 1));
 if ~isdir('../data_sets')
     mkdir('../data_sets');
 end
@@ -440,11 +531,23 @@ for i1 = 1 : numel(flds)
         meas = gp_extF12Chg_shira;
     elseif isequal(fld, 'sustFp')
         meas = g_extFp_shira;
+    elseif isequal(fld, 'rndF12_comp')
+        meas = g_rndF12_comp;
+    elseif isequal(fld, 'meanVDur_rand')
+        meas = meanVDur_rand;
+    elseif isequal(fld, 'meanVDur_sust')
+        meas = meanVDur_sust;
     else
         error('Unexpected field name: %s', fld);
     end
-    
-    title_row = {'NUMBER', 'GRP$', 'SID$', 'START', 'RAMP', 'STAY', 'END'};
+        
+    if ~isempty(strfind(fld, 'sust'));
+        title_row = {'NUMBER', 'GRP$', 'SID$', 'START', 'RAMP', 'STAY', 'END'};
+    elseif isequal(fld, 'meanVDur_rand')
+        title_row = {'NUMBER', 'GRP$', 'SID$', 'NOPERT', 'HIGHER', 'LOWER'};
+    elseif isequal(fld, 'rndF12_comp')
+        title_row = {'NUMBER', 'GRP$', 'SID$', 'RNDF12COMP'};
+    end
     nums = num2cell([meas.ANS; meas.CNS; meas.CWS]);
     sNums = num2cell([1 : size(nums, 1)]');
     t_SIDs = [SID.ANS'; SID.CNS'; SID.CWS'];
