@@ -103,6 +103,10 @@ gp_extF12Chg_shira = struct;
 meanVDur_rand = struct;
 meanVDur_sust = struct;
 
+meanF1s_ext = struct;
+meanF2s_ext = struct;
+
+
 % --- Composite F1-F2 compensation under higher and lower perturbations at
 % the last time point --- %
 g_rndFp_comp = struct;
@@ -116,6 +120,9 @@ for i1 = 1 : numel(grps)
     grp = grps{i1};
     
     age_yo.(grp) = [];
+    
+    meanF1s_ext.(grp) = [];
+    meanF2s_ext.(grp) = [];
     
     meanVDur_rand.(grp) = nan(0, 3); % [noPert, higher, lower]    
     meanVDur_sust.(grp) = nan(0, 4); % [Start, Ramp, Stay, End]
@@ -148,6 +155,11 @@ for i1 = 1 : numel(grps)
         
         out = analyzeKapeData(sID, 'noPlot');
         age_yo.(grp)(end + 1) = out.age_yo;
+        if ~isequal(grp, out.group)
+            error('Mismatch between out.group = %ds and grp = %s\n', out.group, grp);
+        end
+        meanF1s_ext.(grp)(end + 1) = nanmean(out.extF1s_shira);
+        meanF2s_ext.(grp)(end + 1) = nanmean(out.extF2s_shira);
         
         meanVDur_rand.(grp)(end + 1, :) = [nanmean(out.vDur_rand.noPert), nanmean(out.vDur_rand.higher), nanmean(out.vDur_rand.lower)];
         meanVDur_sust.(grp)(end + 1, :) = [nanmean(out.vDur_sust.start), nanmean(out.vDur_sust.ramp),  nanmean(out.vDur_sust.stay), nanmean(out.vDur_sust.end)];
