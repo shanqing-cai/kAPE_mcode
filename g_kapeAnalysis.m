@@ -108,10 +108,14 @@ meanVDur_sust = struct;
 g_rndFp_comp = struct;
 g_rndF12_comp = struct;
 
+age_yo = struct;
+
 ntp = NaN;
 pertVec = [SHIFT_RATIO_SUST_F1, SHIFT_RATIO_SUST_F2];
 for i1 = 1 : numel(grps)
     grp = grps{i1};
+    
+    age_yo.(grp) = [];
     
     meanVDur_rand.(grp) = nan(0, 3); % [noPert, higher, lower]    
     meanVDur_sust.(grp) = nan(0, 4); % [Start, Ramp, Stay, End]
@@ -143,6 +147,8 @@ for i1 = 1 : numel(grps)
         sID = SID.(grp){i2};
         
         out = analyzeKapeData(sID, 'noPlot');
+        age_yo.(grp)(end + 1) = out.age_yo;
+        
         meanVDur_rand.(grp)(end + 1, :) = [nanmean(out.vDur_rand.noPert), nanmean(out.vDur_rand.higher), nanmean(out.vDur_rand.lower)];
         meanVDur_sust.(grp)(end + 1, :) = [nanmean(out.vDur_sust.start), nanmean(out.vDur_sust.ramp),  nanmean(out.vDur_sust.stay), nanmean(out.vDur_sust.end)];
         
@@ -366,6 +372,13 @@ for i1 = 1 : numel(grps)
     
     subplot(4, 1, 4); hold on;
     errorbar([1 : 4], mean(g_extFp_shira.(grp)), ste(g_extFp_shira.(grp)), 'bo-');
+end
+
+%% Subject-related info: age
+for i1 = 1 : numel(grps)
+    grp = grps{i1};
+    fprintf(1, 'Group %s: age (Y.O.) range = [%.1f, %.1f], mean = %.1f, SD = %.1f, median = %.1f, IQR = %.1f\n', ...
+            grp, min(age_yo.(grp)), max(age_yo.(grp)), mean(age_yo.(grp)), std(age_yo.(grp)), median(age_yo.(grp)), iqr(age_yo.(grp)));
 end
 
 %% Descriptive statistics: Duration - rand.

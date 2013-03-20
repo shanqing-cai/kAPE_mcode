@@ -316,6 +316,7 @@ out.extF1s_shira = extF1s_shira;
 out.extF2s_shira = extF2s_shira;
 out.sust_prodF1_shira = sust_prodF1_shira;
 out.sust_prodF2_shira = sust_prodF2_shira;
+out.age_yo = pdata.subject.age;
 
 out.vDur_rand = vDur_rand;
 out.vDur_sust = vDur_sust;
