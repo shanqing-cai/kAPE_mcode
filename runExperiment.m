@@ -3,7 +3,8 @@ DEBUG=0;
 [ret,hostName]=system('hostname');
 
 %% ---- Read and parse expt_config.txt ----
-expt_config=read_parse_expt_config('expt_config.txt');
+configFN = 'expt_config.txt';
+expt_config=read_parse_expt_config(configFN);
 
 dlg_fields = {'SUBJECT_ID', 'SUBJECT_GENDER', ...
               'SUBJECT_DOB', 'SUBJECT_GROUP'};
@@ -134,8 +135,14 @@ if bNew % set up new experiment
     
 	expt.subject=subject;
     
-    expt.allPhases={'pre', 'pract1', 'pract2', 'other', 'rand', 'start', 'ramp','stay','end'};
-    expt.recPhases={'pre', 'pract1', 'pract2', 'other', 'rand', 'start', 'ramp','stay','end'}; %SC The pahses during which the data are recorded
+    expt.allPhases={'pre', 'pract1', 'pract2', 'other', 'rand', ...
+                    'start', 'ramp', 'stay1', 'noise', 'stay2', 'end'};
+%     expt.allPhases={'noise', 'pre', 'pract1', 'pract2', 'other', 'rand', ...
+%                     'start', 'ramp', 'stay1', 'stay2', 'end'};
+    expt.recPhases={'pre', 'pract1', 'pract2', 'other', 'rand', ...
+                    'start', 'ramp', 'stay1', 'noise', 'stay2', 'end'}; % SC The pahses during which the data are recorded
+% 	expt.recPhases={'noise', 'pre', 'pract1', 'pract2', 'other', 'rand', ...
+%                     'start', 'ramp', 'stay1', 'stay2', 'end'};
     
     if isfield(expt_config,'NATURAL_REPS') && isfield(expt_config,'NATURAL_WORDS') && ...
         ~isempty(expt_config.NATURAL_REPS) && ~isempty(expt_config.NATURAL_WORDS) && ...
@@ -169,28 +176,11 @@ if bNew % set up new experiment
     
     expt.script.start.nReps = expt_config.SUST_START_REPS;   %SC Default 15   %SC-Mod(09/26/2007)       % !!2!!
     expt.script.ramp.nReps = expt_config.SUST_RAMP_REPS;   %SC Default 15   %SC-Mod(09/26/2007)       % !!2!!
-    expt.script.stay.nReps = expt_config.SUST_STAY_REPS;   %SC Default 20   %SC-Mod(09/26/2007)       % !!8!!
+%     expt.script.stay.nReps = expt_config.SUST_STAY_REPS;   %SC Default 20   %SC-Mod(09/26/2007)       % !!8!!
+    expt.script.stay1.nReps = expt_config.SUST_STAY1_REPS;
+    expt.script.noise.nReps = expt_config.SUST_NOISE_REPS;
+    expt.script.stay2.nReps = expt_config.SUST_STAY2_REPS;
     expt.script.end.nReps = expt_config.SUST_END_REPS;    %SC Default 20   %SC-Mod(09/26/2007)       % !!8!!
-%     else
-%         expt.trialTypes=[1];
-%         expt.trialOrderRandReps=1;	%How many reps are randomized together
-%         expt.script.pre.nReps=expt_config.PRE_REPS;    %SC Numbers of repetitions in the stages   % !!1!!	
-%         expt.script.pract1.nReps=expt_config.PRACT1_REPS; %SC Default 2   %SC-Mod(09/26/2007)        % !!1!!
-%         expt.script.pract2.nReps=expt_config.PRACT2_REPS; %SC Default 2   %SC-Mod(09/26/2007)        % !!1!!
-%         expt.script.start.nReps=expt_config.START_REPS;  %SC Default 10   %SC-Mod(09/26/2007)       % !!8!!
-%         expt.script.test1.nReps=expt_config.TEST1_REPS; 
-%         expt.script.ramp.nReps=expt_config.RAMP_REPS;   %SC Default 15   %SC-Mod(09/26/2007)       % !!2!!        
-%         expt.script.stay.nReps=expt_config.STAY_REPS;   %SC Default 20   %SC-Mod(09/26/2007)       % !!8!!
-%         expt.script.test2.nReps=expt_config.TEST2_REPS;
-%         expt.script.stay2.nReps=expt_config.STAY2_REPS;
-%         expt.script.end.nReps=expt_config.END_REPS;    %SC Default 20   %SC-Mod(09/26/2007)       % !!8!!
-%         expt.script.test3.nReps=expt_config.TEST3_REPS;
-% %         expt.script.test2.nReps=expt_config.TEST3_REPS;
-%     end
-    
-%     if isequal(expt.allPhases{1},'natural')
-%         expt.script.natural.nReps=expt_config.NATURAL_REPS;        
-%     end
 
 	expt.trialTypeDesc = cell(1, 5);
 	expt.trialTypeDesc{1} = 'Speech with auditory feedback';
@@ -230,15 +220,19 @@ if bNew % set up new experiment
 %     end
     expt.script.ramp    = genPhaseScript('ramp', ...
                                          expt.script.ramp.nReps, expt.sustWords);
-    expt.script.stay    = genPhaseScript('stay', ...
-                                         expt.script.stay.nReps, expt.sustWords);
+    expt.script.stay1    = genPhaseScript('stay1', ...
+                                          expt.script.stay1.nReps, expt.sustWords);
+    expt.script.noise    = genPhaseScript('noise', ...
+                                          expt.script.noise.nReps, expt.sustWords);
+    expt.script.stay2    = genPhaseScript('stay2', ...
+                                          expt.script.stay2.nReps, expt.sustWords);
 %     if isfield(expt.script,'test2')
 %         expt.script.test2= genPhaseScript('test2',  expt.script.test2.nReps,  expt.trialTypes,expt.preWords, expt.trainWords, expt.testWords, expt.pseudoWords, expt.trialOrderRandReps, expt.subject.designNum);
 %     end
     
 %     expt.script.stay2=  genPhaseScript('stay2',   expt.script.stay2.nReps,   expt.trialTypes,expt.preWords, expt.trainWords, expt.testWords, expt.pseudoWords, expt.trialOrderRandReps, expt.subject.designNum);
-    expt.script.end    = genPhaseScript('end', ...
-                                         expt.script.end.nReps, expt.sustWords);
+    expt.script.end      = genPhaseScript('end', ...
+                                          expt.script.end.nReps, expt.sustWords);
     
 %     if isfield(expt.script,'test3')
 %         expt.script.test3= genPhaseScript('test3',  expt.script.test2.nReps,  expt.trialTypes,expt.trainWords, expt.testWords, expt.pseudoWords, expt.trialOrderRandReps, expt.subject.designNum);
@@ -279,6 +273,12 @@ else % load expt
 end
 
 
+% Make a copy of the configuration file
+dconfig = dir(fullfile(dirname, 'config*.txt'));
+configBackupFN = fullfile(dirname, sprintf('expt_config_%.2d.txt', length(dconfig) + 1));
+copyfile(configFN, configBackupFN);
+check_file(configBackupFN);
+fprintf(1, 'INFO: Made a backup of the experiment configuration file at: %s\n', configBackupFN);
 
 %% initialize algorithm
 MexIO('init',p);      %SC Set the initial (default) parameters
@@ -302,6 +302,24 @@ else
 
 end
 
+%% Load masking noise
+check_file(expt_config.MASKING_NOISE_WAV_FILE_NAME);
+[mn_w, mn_fs] = wavread(expt_config.MASKING_NOISE_WAV_FILE_NAME);
+if mn_fs ~= expt_config.SAMPLING_RATE
+    error('The wav file of masking noise does not have the required sampling rate: %.2f Hz\n', expt_config.SAMPLING_RATE);
+end
+fprintf(1, 'INFO: Loaded masking-noise waveform from file: %s\n', expt_config.MASKING_NOISE_WAV_FILE_NAME);
+
+mn_w = mn_w * (10 ^ (expt_config.MASKING_NOISE_LEVEL_RELATIVE / 20));
+fprintf(1, 'INFO: Scaled masking-noise waveform by %.2f dB\n', expt_config.MASKING_NOISE_LEVEL_RELATIVE);
+if ~isempty(find(mn_w > 1, 1)) || ~isempty(find(mn_w < -1, 1))
+    fprintf(1, 'WARNING: clipping detected in scaled masking-noise waveform. Consider using lower scaling.');
+    mn_w(mn_w > 1) = 1;
+    mn_w(mn_w < -1) = -1;
+end
+
+TransShiftMex(3, 'datapb', mn_w, 0);
+
 %% Load the multi-talker babble noise
 % [x,fs_mtb]=wavread('mtbabble48k.wav');
 % lenMTB=round(2.5*fs_mtb);
@@ -315,7 +333,6 @@ end
 % TransShiftMex(3,'datapb',x_mtb{1});
 
 %% expt
-      
 figIdDat=makeFigDataMon;
 
 % wordList=expt.words;
@@ -960,9 +977,9 @@ for n=startPhase:length(allPhases)
             hgui.repNum = i0;
             hgui.trialNum = k;
 
-            if (hgui.trialType==2 || hgui.trialType==3)	% Speech with masking noise or passively listening to masking noise
-                TransShiftMex(3,'datapb',gainMTB_fb*x_mtb{3-mod(k,3)},0);
-			end
+%             if (hgui.trialType==2 || hgui.trialType==3)	% Speech with masking noise or passively listening to masking noise
+%                 TransShiftMex(3,'datapb',gainMTB_fb*x_mtb{3-mod(k,3)},0);
+% 			end
                
 			disp('');
             if (ischar(thisWord))
@@ -1202,17 +1219,22 @@ for n=1:nReps
     oneRep.word=cell(1,0);
     cntTW=1;
     for m=1:length(bt)
-        if (bt(m)==0)					
-            oneRep.trialOrder=[oneRep.trialOrder,1];
-            oneRep.word{length(oneRep.word)+1}=wordsUsed{twCnt};
-            twCnt=twCnt+1;
-        elseif (bt(m)==1)
-            oneRep.trialOrder=[oneRep.trialOrder,[5,4,4]];
-            oneRep.word{length(oneRep.word)+1}=pseudoWordsUsed(cntTW+1);
-            oneRep.word{length(oneRep.word)+1}=pseudoWordsUsed(cntTW);
-            oneRep.word{length(oneRep.word)+1}=pseudoWordsUsed(cntTW+1);
-            cntTW=cntTW+2;
+%         if (bt(m)==0)
+        if isequal(stage, 'noise')
+            oneRep.trialOrder=[oneRep.trialOrder, 2];
+        else
+            oneRep.trialOrder=[oneRep.trialOrder, 1];
         end
+            
+        oneRep.word{length(oneRep.word)+1}=wordsUsed{twCnt};
+        twCnt=twCnt+1;
+%         elseif (bt(m)==1)
+%             oneRep.trialOrder=[oneRep.trialOrder,[5,4,4]];
+%             oneRep.word{length(oneRep.word)+1}=pseudoWordsUsed(cntTW+1);
+%             oneRep.word{length(oneRep.word)+1}=pseudoWordsUsed(cntTW);
+%             oneRep.word{length(oneRep.word)+1}=pseudoWordsUsed(cntTW+1);
+%             cntTW=cntTW+2;
+%         end
     end
 
     if (isequal(stage,'pract1') || isequal(stage,'pract2'))

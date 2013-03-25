@@ -79,7 +79,8 @@ end
 
 handles.trigByScanner=0;
 handles.TA=2.5;
-handles.allPhases = {'pre', 'pract1', 'pract2', 'rand', 'start'};
+handles.allPhases = {'pre', 'pract1', 'pract2', 'other', 'rand', ...
+                     'start', 'ramp', 'stay1', 'stay2', 'end'};
 handles.phase='';
 handles.trigKey='add';	% To change
 handles.trialLen = 3;
@@ -880,9 +881,9 @@ if (handles.debug==0)
     elseif (handles.trialType == 2 || handles.trialType == 3)
         TransShiftMex(3, 'fb', 2);
     elseif (handles.trialType == 4)
-        TransShiftMex(3,'fb',1);
-    elseif (handles.trialType == 5)		
-        TransShiftMex(3,'fb',1);
+        TransShiftMex(3,'fb', 1);
+    elseif (handles.trialType == 5)
+        TransShiftMex(3,'fb', 1);
     end
     
 	load(handles.uiConfigFN);   % gives uiConfig
