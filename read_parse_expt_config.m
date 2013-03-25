@@ -35,7 +35,8 @@ items={ 'SUBJECT_ID', 'SUBJECT_GENDER', 'SUBJECT_DOB', 'SUBJECT_GROUP', ...
         'SUST_END_REPS', ...
         'TRIAL_LEN', 'TRIAL_LEN_MAX', ...
         'SAMPLING_RATE', 'FRAME_SIZE', 'DOWNSAMP_FACT', ...
-        'MASKING_NOISE_LEVEL_RELATIVE'};
+        'MASKING_NOISE_LEVEL_RELATIVE', ...
+        'MASKING_NOISE_WAV_FILE_NAME'};
 
 for i1=1:numel(items)
     item=items{i1};
@@ -70,7 +71,8 @@ for i1=1:numel(items)
         continue;
     end
     
-    if isequal(item,'SUBJECT_ID') || isequal(item, 'SUBJECT_GROUP') 
+    if isequal(item, 'SUBJECT_ID') || isequal(item, 'SUBJECT_GROUP') || ...
+       isequal(item, 'MASKING_NOISE_WAV_FILE_NAME')
         str=strtrim(str);
         config.(item)=str;
     elseif isequal(item,'SUBJECT_GENDER')
