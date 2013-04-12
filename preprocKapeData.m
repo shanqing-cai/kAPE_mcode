@@ -51,16 +51,16 @@ fprintf('Subject gender: \t%s\n',expt.subject.sex);
 % fprintf('Shift direction: %s\n',expt.subject.shiftDirection);
 % fprintf('Shift ratio: %f\n',expt.subject.shiftRatio);
 
-idx1=fsic(expt.recPhases,'pre');
-idx2=fsic(expt.recPhases,'pract1');
-idx3=fsic(expt.recPhases,'pract2');
-
-idx4=fsic(expt.recPhases,'rand');
-
-idx5=fsic(expt.recPhases,'start');
-idx6=fsic(expt.recPhases,'ramp');
-idx7=fsic(expt.recPhases,'stay');
-idx8=fsic(expt.recPhases,'end');
+% idx1=fsic(expt.recPhases,'pre');
+% idx2=fsic(expt.recPhases,'pract1');
+% idx3=fsic(expt.recPhases,'pract2');
+% 
+% idx4=fsic(expt.recPhases,'rand');
+% 
+% idx5=fsic(expt.recPhases,'start');
+% idx6=fsic(expt.recPhases,'ramp');
+% idx7=fsic(expt.recPhases,'stay');
+% idx8=fsic(expt.recPhases,'end');
 
 % randPhases = expt.recPhases(setxor(1:numel(expt.recPhases),[idx1, idx2, idx3, idx]));
 % nTrainPhases = numel(trainPhases);
@@ -85,7 +85,7 @@ otherData = init_data('other', otherPhase, rawDataDir, subjID);
 randPhase = {'rand'};
 randData = init_data('rand', randPhase, rawDataDir, subjID);
 
-sustPhases = {'start', 'ramp', 'stay', 'end'};
+sustPhases = {'start', 'ramp', 'stay1', 'noise', 'stay2', 'end'};
 sustData = init_data('sust', sustPhases, rawDataDir, subjID);
 
 pdata.otherData = otherData;
@@ -166,8 +166,9 @@ if bNew
     
     trialListPert=struct;
     idx_ramp = fsic(trialListSust.phase, 'ramp');
-    idx_stay = fsic(trialListSust.phase, 'stay');
-    idx_pert = [idx_ramp, idx_stay];
+    idx_stay1 = fsic(trialListSust.phase, 'stay1');
+    idx_stay2 = fsic(trialListSust.phase, 'stay2');
+    idx_pert = [idx_ramp, idx_stay1, idx_stay2];
     
     trialListPert.fn = trialListSust.fn(idx_pert);
     trialListPert.phase = trialListSust.phase(idx_pert);

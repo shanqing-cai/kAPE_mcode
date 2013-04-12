@@ -22,7 +22,11 @@ for i1 = 1 : numel(phases)
         d1 = dir(fullfile(rawDataDir, subjID, t_phase,'rep*'));
         for i2=1:numel(d1)
             t_dir=fullfile(rawDataDir,subjID,t_phase,d1(i2).name);
-            d2=dir(fullfile(t_dir,'trial-*-1.mat'));
+            
+            d2_1 = dir(fullfile(t_dir,'trial-*-1.mat'));
+            d2_2 = dir(fullfile(t_dir,'trial-*-2.mat'));
+            d2 = [d2_1, d2_2];
+            
             for i3=1:numel(d2)
                 t_fn=fullfile(t_dir,d2(i3).name);
                 load(t_fn);     % gives data
@@ -30,7 +34,15 @@ for i1 = 1 : numel(phases)
                 rData.rawDataFNs{end+1}=t_fn;
                 rData.phases{end+1}=t_phase;
                 rData.blockNums(end+1)=str2num(strrep(d1(i2).name,'rep',''));
-                rData.trialNums(end+1)=str2num(strrep(strrep(d2(i3).name,'trial-',''),'-1.mat',''));
+                
+                if ~isempty(strfind(d2(i3).name, '-1.mat'))
+                    rData.trialNums(end+1)=str2num(strrep(strrep(d2(i3).name,'trial-',''),'-1.mat',''));
+                elseif ~isempty(strfind(d2(i3).name, '-2.mat'))
+                    rData.trialNums(end+1)=str2num(strrep(strrep(d2(i3).name,'trial-',''),'-2.mat',''));
+                else
+                    error('Unexpected mat file name: %s', d2(i3).name);
+                end
+                    
                 rData.words{end+1}=data.params.name;
                 rData.datenums(end+1)=datenum(data.timeStamp);
                 
