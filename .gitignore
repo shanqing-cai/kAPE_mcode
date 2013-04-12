@@ -1,5 +1,8 @@
+.gitignore
 *.asv
 *~
 uimg/
 utterimg/
 dump/
+*.wav
+

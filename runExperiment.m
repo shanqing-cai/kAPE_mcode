@@ -1067,7 +1067,12 @@ for n=startPhase:length(allPhases)
                     end
                 end
             end
-			
+            
+            % -- Save phase, repetition and trial number in "data" -- %
+            data.params.phase = thisphase;
+            data.params.repNum = i0;
+            data.params.trialNum = k;
+            
             save(fullfile(subsubdirname,['trial-',num2str(k),'-',num2str(thisTrial)]),'data');
             disp(['Saved ',fullfile(subsubdirname,['trial-',num2str(k),'-',num2str(thisTrial)]),'.']);
             disp(' ');
