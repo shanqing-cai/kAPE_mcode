@@ -136,11 +136,11 @@ if bNew % set up new experiment
 	expt.subject=subject;
     
     expt.allPhases={'pre', 'pract1', 'pract2', 'other', 'rand', ...
-                    'start', 'ramp', 'stay1', 'noise', 'stay2', 'end'};
+                    'start', 'prenoise', 'ramp', 'stay1', 'noise', 'stay2', 'end'};
 %     expt.allPhases={'noise', 'pre', 'pract1', 'pract2', 'other', 'rand', ...
 %                     'start', 'ramp', 'stay1', 'stay2', 'end'};
     expt.recPhases={'pre', 'pract1', 'pract2', 'other', 'rand', ...
-                    'start', 'ramp', 'stay1', 'noise', 'stay2', 'end'}; % SC The pahses during which the data are recorded
+                    'start', 'prenoise', 'ramp', 'stay1', 'noise', 'stay2', 'end'}; % SC The pahses during which the data are recorded
 % 	expt.recPhases={'noise', 'pre', 'pract1', 'pract2', 'other', 'rand', ...
 %                     'start', 'ramp', 'stay1', 'stay2', 'end'};
     
@@ -175,6 +175,7 @@ if bNew % set up new experiment
     expt.script.rand.trialsPerBlock_higher = expt_config.RAND_HIGHER_TRIALS_PER_BLOCK;
     
     expt.script.start.nReps = expt_config.SUST_START_REPS;   %SC Default 15   %SC-Mod(09/26/2007)       % !!2!!
+    expt.script.prenoise.nReps = expt_config.SUST_PRENOISE_REPS;
     expt.script.ramp.nReps = expt_config.SUST_RAMP_REPS;   %SC Default 15   %SC-Mod(09/26/2007)       % !!2!!
 %     expt.script.stay.nReps = expt_config.SUST_STAY_REPS;   %SC Default 20   %SC-Mod(09/26/2007)       % !!8!!
     expt.script.stay1.nReps = expt_config.SUST_STAY1_REPS;
@@ -218,8 +219,10 @@ if bNew % set up new experiment
 %     if isfield(expt.script,'test1')
 %         expt.script.test1= genPhaseScript('test1',  expt.script.test1.nReps,  expt.trialTypes,expt.preWords, expt.trainWords, expt.testWords, expt.pseudoWords, expt.trialOrderRandReps, expt.subject.designNum);
 %     end
+    expt.script.prenoise    = genPhaseScript('prenoise', ...
+                                             expt.script.prenoise.nReps, expt.sustWords);
     expt.script.ramp    = genPhaseScript('ramp', ...
-                                         expt.script.ramp.nReps, expt.sustWords);
+                                          expt.script.ramp.nReps, expt.sustWords);
     expt.script.stay1    = genPhaseScript('stay1', ...
                                           expt.script.stay1.nReps, expt.sustWords);
     expt.script.noise    = genPhaseScript('noise', ...
@@ -1225,7 +1228,7 @@ for n=1:nReps
     cntTW=1;
     for m=1:length(bt)
 %         if (bt(m)==0)
-        if isequal(stage, 'noise')
+        if isequal(stage, 'prenoise') || isequal(stage, 'noise')
             oneRep.trialOrder=[oneRep.trialOrder, 2];
         else
             oneRep.trialOrder=[oneRep.trialOrder, 1];

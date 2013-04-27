@@ -85,7 +85,7 @@ otherData = init_data('other', otherPhase, rawDataDir, subjID);
 randPhase = {'rand'};
 randData = init_data('rand', randPhase, rawDataDir, subjID);
 
-sustPhases = {'start', 'ramp', 'stay1', 'noise', 'stay2', 'end'};
+sustPhases = {'start', 'prenoise', 'ramp', 'stay1', 'noise', 'stay2', 'end'};
 sustData = init_data('sust', sustPhases, rawDataDir, subjID);
 
 pdata.otherData = otherData;
