@@ -1,9 +1,13 @@
+<<<<<<< HEAD
 SUBJECT_ID      TS2_1
+=======
+SUBJECT_ID      TS_KAPE2_1
+>>>>>>> 27a926854d396dd7604c7e64ab9d4e98b64ca5b7
 SUBJECT_GENDER  male
 SUBJECT_DOB     30-JUL-2005
 SUBJECT_GROUP	CWS         % CWS, CNS, ANS
 
-DATA_DIR        D:\DATA\KAPE
+DATA_DIR        E:\DATA\KAPE2
 
 SHIFT_RATIO_RAND_LOWER_F1			+0.25		% 200 / 800
 SHIFT_RATIO_RAND_LOWER_F2			-0.125   	% 250 / 2000
@@ -35,7 +39,9 @@ RAND_LOWER_TRIALS_PER_BLOCK 1 % Number of "lower" trials in each random block
 RAND_HIGHER_TRIALS_PER_BLOCK 1 % Number of "higher" trials in each random block
 
 SUST_START_REPS					1		% 3 * 6 = 18 trials
+SUST_PRENOISE_REPS              4
 SUST_RAMP_REPS					6
+<<<<<<< HEAD
 SUST_STAY1_REPS					12
 SUST_NOISE_REPS                 4
 SUST_STAY2_REPS					6
@@ -43,6 +49,10 @@ SUST_END_REPS					6
 
 MASKING_NOISE_WAV_FILE_NAME     mtbabble48k.wav
 MASKING_NOISE_LEVEL_RELATIVE    -10
+=======
+SUST_STAY_REPS					12
+SUST_END_REPS					6
+>>>>>>> 27a926854d396dd7604c7e64ab9d4e98b64ca5b7
 
 TRIAL_LEN       3     % Unit: sec
 TRIAL_LEN_MAX   8     % Unit: sec
