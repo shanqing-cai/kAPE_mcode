@@ -420,20 +420,6 @@ ylabel('Vowel duration (ms) (mean\pm1 SEM)');
 set(gca, 'XLim', [0, 4], 'XTick', [1 : 3], 'XTickLabel', {'noPert', 'higher', 'lower'});
 legend(grps);
 
-%% Descriptive statistics: Duration - rand.
-figure('Name', 'Vowel duration - rand.');
-hold on;
-for i1= 1 : numel(grps)
-    grp = grps{i1};
-    errorbar(1 : 3, ...
-             1e3 * mean(meanVDur_rand.(grp)), ...
-             1e3 * ste(meanVDur_rand.(grp)), ...
-             'Color', colors.(grp));    
-end
-ylabel('Vowel duration (ms) (mean\pm1 SEM)');
-set(gca, 'XLim', [0, 4], 'XTick', [1 : 3], 'XTickLabel', {'noPert', 'higher', 'lower'});
-legend(grps);
-
 %% Descriptive statistics: Duration - sust.
 figure('Name', 'Vowel duration - sust.');
 hold on;
