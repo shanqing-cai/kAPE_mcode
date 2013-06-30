@@ -3,6 +3,8 @@ function g_kapeAnalysis(subjListFN, varargin)
 SHIFT_RATIO_SUST_F1 = +0.25;
 SHIFT_RATIO_SUST_F2 = -0.125;
 
+infoXlsFN = 'E:/DATA/KAPE/kAPE_Info_&_Data_6-19-13_LW.xls';
+
 %% Options: subjects
 % SID.ANS = {'PILOT_M01', 'PILOT_F03', 'PILOT_M02', ...
 %            'ANS_F05', 'ANS_F06', 'ANS_F07', 'ANS_F08', 'ANS_F09', 'ANS_F10','ANS_F11', ...
@@ -33,6 +35,15 @@ for i1 = 1 : numel(sgrps)
     fprintf(1, 'INFO: Subject list file contains %d subjects in group %s\n', ...
             numel(SID.(sgrp)), sgrp);
 end      
+
+%% Load additional information from xls file
+check_file(infoXlsFN);
+[N, T] = xlsread(infoXlsFN);
+
+SSI_tot.CWS = nan(1, length(SID.CWS));
+for i1 = 1 : length(SID.CWS)
+    SSI_tot.CWS(i1) = get_kape_subj_info(N, T, SID.CWS{i1}, 'SSI - Total');
+end
 
 %% Options: colors and other visualization options
 colors.higher = [1, 0, 0];
@@ -85,6 +96,8 @@ if isequal(gend, 'male') || isequal(gend, 'female')
         SID.(grp) = SID.(grp)(find(bKeep));
     end
 end
+
+bNoXLS = ~isempty(fsic(varargin, '--noXLS'));
 
 %%
 g_rndF1TrajChg = struct;
@@ -472,12 +485,66 @@ set(gca, 'XTick', [1, 2, 3], 'XTickLabel', grps);
 ylabel('Composite F12 compensation to rand. pert. (normalized)');
 
 %% Group comparison: sust. combined F1/F2 compens.
+% Perform statistical comparisons
+nPerm = 10000;
+testType = 'rs';     % {'t', 'rs'} (t-test or rank-sum / signed-rank tests)
+check_dir('perm_files', '-create');
+permMatFN = sprintf('%s_%s_perm%d_gend%s.mat', mfilename, testType, nPerm, upper(gend(1)));
+permMatFN = fullfile('perm_files', permMatFN);
+
+if isfile(permMatFN)
+    load(permMatFN); 
+else
+    ps_wg = nan(numel(grps), size(gp_extF12Chg_shira.ANS, 2) - 1);
+    rp_ps_wg = nan(nPerm, numel(grps), size(gp_extF12Chg_shira.ANS, 2) - 1);
+    for i0 = 1 : 1 + nPerm    
+        for i1 = 1 : numel(grps)
+            grp = grps{i1};
+            if i0 > 1
+                signPerm = (rand(size(gp_extF12Chg_shira.(grp), 1), 1) > 0.5) * 2 - 1;
+                dat = gp_extF12Chg_shira.(grp)(:, 2 : end) .* repmat(signPerm, 1, size(gp_extF12Chg_shira.(grp), 2) - 1);
+            else
+                dat = gp_extF12Chg_shira.(grp)(:, 2 : end);
+            end
+
+            for i2 = 1 : size(gp_extF12Chg_shira.ANS, 2) - 1
+                if isequal(testType, 't')
+                    [~, t_p] = ttest(dat(:, i2));
+                elseif isequal(testType, 'rs')
+                    t_p = signrank(dat(:, i2));
+                end
+
+                if i0 == 1
+                    ps_wg(i1, i2) = t_p;
+                else
+                    rp_ps_wg(i0 - 1, i1, i2) = t_p;
+                end
+            end
+        end
+    end
+
+    save(permMatFN, 'rp_ps_wg', 'ps_wg');
+    fprintf(1, 'INFO: Saved permutation data to file: %s\n', permMatFN);
+end
+
+assert(size(rp_ps_wg, 1) == nPerm);
+min_rp_ps_wg = min(rp_ps_wg, [], 3);   
+    
+corr_ps_wg = nan(size(ps_wg));
+for i1 = 1 : numel(grps)
+    for i2 = 1 : size(gp_extF12Chg_shira.ANS, 2) - 1
+        corr_ps_wg(i1, i2) = length(find(rp_ps_wg(:, i2) < ps_wg(i1, i2))) / nPerm;
+    end
+end
+
 figure('Name', 'Groups: sust.: combined F1/F2 compens.');
 hold on;
+
 for i1 = 1 : numel(grps)
     grp = grps{i1};
+    
     errorbar([1 : 4], mean(gp_extF12Chg_shira.(grp)), ste(gp_extF12Chg_shira.(grp)), ...
-             'o-', 'Color', colors.(grp))
+             'o-', 'Color', colors.(grp));
 end
 plot([0.5, 4.5], [0, 0], '-', 'Color', [0.5, 0.5, 0.5]);
 set(gca, 'XLim', [0.5, 4.5]);
@@ -502,89 +569,99 @@ set(gca, 'XTick', [1 : 4], 'XTickLabel', {'Start', 'Ramp', 'Stay', 'End'});
 ylabel('Fp adaptation');
 legend(grps, 'Location', 'Southeast');
 
+%% Correlation between SSI total score and compensation 
+figure;
+plot(SSI_tot.CWS, gp_extF12Chg_shira.CWS(:, 3), 'o');
+xlabel('SSI total score');
+ylabel('F12 change (Stay phase)');
+grid on;
+
 %% Write data to an xls file, which can be used by other stats software, e.g., SPSS, SYSTAT
-xlsFNs.sustF1 = sprintf('../data_sets/sust_%s_F1_%dANS_%dCNS_%dCWS.xls', ...
-                        gend(1), ...
-                        size(g_extF1Chg_shira.ANS, 1), ...
-                        size(g_extF1Chg_shira.CNS, 1), ...
-                        size(g_extF1Chg_shira.CWS, 1));
-xlsFNs.sustF2 = sprintf('../data_sets/sust_%s_F2_%dANS_%dCNS_%dCWS.xls', ...
-                        gend(1), ...
-                        size(g_extF1Chg_shira.ANS, 1), ...
-                        size(g_extF1Chg_shira.CNS, 1), ...
-                        size(g_extF1Chg_shira.CWS, 1));
-xlsFNs.sustF12 = sprintf('../data_sets/sust_%s_F12_%dANS_%dCNS_%dCWS.xls', ...
-                        gend(1), ...
-                        size(gp_extF12Chg_shira.ANS, 1), ...
-                        size(gp_extF12Chg_shira.CNS, 1), ...
-                        size(gp_extF12Chg_shira.CWS, 1));
-xlsFNs.sustFp = sprintf('../data_sets/sust_%s_Fp_%dANS_%dCNS_%dCWS.xls', ...
-                        gend(1), ...
-                        size(g_extFp_shira.ANS, 1), ...
-                        size(g_extFp_shira.CNS, 1), ...
-                        size(g_extFp_shira.CWS, 1));
-xlsFNs.rndF12_comp = sprintf('../data_sets/randF12_comp_%s_%dANS_%dCNS_%dCWS.xls', ...
-                        gend(1), ...
-                        size(g_rndF12_comp.ANS, 1), ...
-                        size(g_rndF12_comp.CNS, 1), ...
-                        size(g_rndF12_comp.CWS, 1));
-xlsFNs.meanVDur_rand = sprintf('../data_sets/meanVDur_rand_%s_%dANS_%dCNS_%dCWS.xls', ...
-                        gend(1), ...
-                        size(meanVDur_rand.ANS, 1), ...
-                        size(meanVDur_rand.CNS, 1), ...
-                        size(meanVDur_rand.CWS, 1));
-xlsFNs.meanVDur_sust = sprintf('../data_sets/meanVDur_sust_%s_%dANS_%dCNS_%dCWS.xls', ...
-                        gend(1), ...
-                        size(meanVDur_sust.ANS, 1), ...
-                        size(meanVDur_sust.CNS, 1), ...
-                        size(meanVDur_sust.CWS, 1));
-if ~isdir('../data_sets')
-    mkdir('../data_sets');
-end
+if ~bNoXLS
+    xlsFNs.sustF1 = sprintf('../data_sets/sust_%s_F1_%dANS_%dCNS_%dCWS.xls', ...
+                            gend(1), ...
+                            size(g_extF1Chg_shira.ANS, 1), ...
+                            size(g_extF1Chg_shira.CNS, 1), ...
+                            size(g_extF1Chg_shira.CWS, 1));
+    xlsFNs.sustF2 = sprintf('../data_sets/sust_%s_F2_%dANS_%dCNS_%dCWS.xls', ...
+                            gend(1), ...
+                            size(g_extF1Chg_shira.ANS, 1), ...
+                            size(g_extF1Chg_shira.CNS, 1), ...
+                            size(g_extF1Chg_shira.CWS, 1));
+    xlsFNs.sustF12 = sprintf('../data_sets/sust_%s_F12_%dANS_%dCNS_%dCWS.xls', ...
+                            gend(1), ...
+                            size(gp_extF12Chg_shira.ANS, 1), ...
+                            size(gp_extF12Chg_shira.CNS, 1), ...
+                            size(gp_extF12Chg_shira.CWS, 1));
+    xlsFNs.sustFp = sprintf('../data_sets/sust_%s_Fp_%dANS_%dCNS_%dCWS.xls', ...
+                            gend(1), ...
+                            size(g_extFp_shira.ANS, 1), ...
+                            size(g_extFp_shira.CNS, 1), ...
+                            size(g_extFp_shira.CWS, 1));
+    xlsFNs.rndF12_comp = sprintf('../data_sets/randF12_comp_%s_%dANS_%dCNS_%dCWS.xls', ...
+                            gend(1), ...
+                            size(g_rndF12_comp.ANS, 1), ...
+                            size(g_rndF12_comp.CNS, 1), ...
+                            size(g_rndF12_comp.CWS, 1));
+    xlsFNs.meanVDur_rand = sprintf('../data_sets/meanVDur_rand_%s_%dANS_%dCNS_%dCWS.xls', ...
+                            gend(1), ...
+                            size(meanVDur_rand.ANS, 1), ...
+                            size(meanVDur_rand.CNS, 1), ...
+                            size(meanVDur_rand.CWS, 1));
+    xlsFNs.meanVDur_sust = sprintf('../data_sets/meanVDur_sust_%s_%dANS_%dCNS_%dCWS.xls', ...
+                            gend(1), ...
+                            size(meanVDur_sust.ANS, 1), ...
+                            size(meanVDur_sust.CNS, 1), ...
+                            size(meanVDur_sust.CWS, 1));
+    if ~isdir('../data_sets')
+        mkdir('../data_sets');
+    end
 
-                    
-flds = fields(xlsFNs);
 
-for i1 = 1 : numel(flds)
-    fld = flds{i1};
-    
-    if isequal(fld, 'sustF1')
-        meas = g_extF1_shira;
-    elseif isequal(fld, 'sustF2')
-        meas = g_extF2_shira;
-    elseif isequal(fld, 'sustF12')
-        meas = gp_extF12Chg_shira;
-    elseif isequal(fld, 'sustFp')
-        meas = g_extFp_shira;
-    elseif isequal(fld, 'rndF12_comp')
-        meas = g_rndF12_comp;
-    elseif isequal(fld, 'meanVDur_rand')
-        meas = meanVDur_rand;
-    elseif isequal(fld, 'meanVDur_sust')
-        meas = meanVDur_sust;
-    else
-        error('Unexpected field name: %s', fld);
+    flds = fields(xlsFNs);
+
+    for i1 = 1 : numel(flds)
+        fld = flds{i1};
+
+        if isequal(fld, 'sustF1')
+            meas = g_extF1_shira;
+        elseif isequal(fld, 'sustF2')
+            meas = g_extF2_shira;
+        elseif isequal(fld, 'sustF12')
+            meas = gp_extF12Chg_shira;
+        elseif isequal(fld, 'sustFp')
+            meas = g_extFp_shira;
+        elseif isequal(fld, 'rndF12_comp')
+            meas = g_rndF12_comp;
+        elseif isequal(fld, 'meanVDur_rand')
+            meas = meanVDur_rand;
+        elseif isequal(fld, 'meanVDur_sust')
+            meas = meanVDur_sust;
+        else
+            error('Unexpected field name: %s', fld);
+        end
+
+        if ~isempty(strfind(fld, 'sust'));
+            title_row = {'NUMBER', 'GRP$', 'SID$', 'START', 'RAMP', 'STAY', 'END'};
+        elseif isequal(fld, 'meanVDur_rand')
+            title_row = {'NUMBER', 'GRP$', 'SID$', 'NOPERT', 'HIGHER', 'LOWER'};
+        elseif isequal(fld, 'rndF12_comp')
+            title_row = {'NUMBER', 'GRP$', 'SID$', 'RNDF12COMP'};
+        end
+        nums = num2cell([meas.ANS; meas.CNS; meas.CWS]);
+        sNums = num2cell([1 : size(nums, 1)]');
+        t_SIDs = [SID.ANS'; SID.CNS'; SID.CWS'];
+        grps = [repmat({'ANS'},  size(g_extF1Chg_shira.ANS, 1), 1); 
+                repmat({'CNS'},  size(g_extF1Chg_shira.CNS, 1), 1); 
+                repmat({'CWS'},  size(g_extF1Chg_shira.CWS, 1), 1)];
+
+        dat = [title_row; [sNums, grps, t_SIDs, nums]];
+        xlswrite(xlsFNs.(fld), dat, 1);
+
+        if isfile(xlsFNs.(fld))
+            fprintf(1, 'INFO: Wrote %s data to file %s\n', fld, xlsFNs.(fld));
+        end
     end
-        
-    if ~isempty(strfind(fld, 'sust'));
-        title_row = {'NUMBER', 'GRP$', 'SID$', 'START', 'RAMP', 'STAY', 'END'};
-    elseif isequal(fld, 'meanVDur_rand')
-        title_row = {'NUMBER', 'GRP$', 'SID$', 'NOPERT', 'HIGHER', 'LOWER'};
-    elseif isequal(fld, 'rndF12_comp')
-        title_row = {'NUMBER', 'GRP$', 'SID$', 'RNDF12COMP'};
-    end
-    nums = num2cell([meas.ANS; meas.CNS; meas.CWS]);
-    sNums = num2cell([1 : size(nums, 1)]');
-    t_SIDs = [SID.ANS'; SID.CNS'; SID.CWS'];
-    grps = [repmat({'ANS'},  size(g_extF1Chg_shira.ANS, 1), 1); 
-            repmat({'CNS'},  size(g_extF1Chg_shira.CNS, 1), 1); 
-            repmat({'CWS'},  size(g_extF1Chg_shira.CWS, 1), 1)];
-        
-	dat = [title_row; [sNums, grps, t_SIDs, nums]];
-    xlswrite(xlsFNs.(fld), dat, 1);
-        
-    if isfile(xlsFNs.(fld))
-        fprintf(1, 'INFO: Wrote %s data to file %s\n', fld, xlsFNs.(fld));
-    end
+
 end
 return
