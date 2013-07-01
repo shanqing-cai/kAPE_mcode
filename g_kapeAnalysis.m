@@ -5,6 +5,9 @@ SHIFT_RATIO_SUST_F2 = -0.125;
 
 infoXlsFN = 'E:/DATA/KAPE/kAPE_Info_&_Data_6-19-13_LW.xls';
 
+fontSize = 12;
+CORP_THRESH = 0.05;
+
 %% Options: subjects
 % SID.ANS = {'PILOT_M01', 'PILOT_F03', 'PILOT_M02', ...
 %            'ANS_F05', 'ANS_F06', 'ANS_F07', 'ANS_F08', 'ANS_F09', 'ANS_F10','ANS_F11', ...
@@ -40,9 +43,25 @@ end
 check_file(infoXlsFN);
 [N, T] = xlsread(infoXlsFN);
 
+age_mo = struct;
+for i1 = 1 : numel(sgrps)
+    grp = sgrps{i1};
+    age_mo.(grp) = nan(1, length(SID.(grp)));
+end
 SSI_tot.CWS = nan(1, length(SID.CWS));
-for i1 = 1 : length(SID.CWS)
-    SSI_tot.CWS(i1) = get_kape_subj_info(N, T, SID.CWS{i1}, 'SSI - Total');
+
+for i0 = 1 : numel(sgrps)
+    grp = sgrps{i0};
+    
+    for i1 = 1 : length(SID.(grp))
+        if isequal(grp, 'CNS') || isequal(grp, 'CWS')
+            age_mo.(grp)(i1) = get_kape_subj_info(N, T, SID.(grp){i1}, 'Age: kAPE (mo)');
+        end
+        
+        if isequal(grp, 'CWS')
+            SSI_tot.(grp)(i1) = get_kape_subj_info(N, T, SID.(grp){i1}, 'SSI - Total');
+        end
+    end
 end
 
 %% Options: colors and other visualization options
@@ -98,6 +117,16 @@ if isequal(gend, 'male') || isequal(gend, 'female')
 end
 
 bNoXLS = ~isempty(fsic(varargin, '--noXLS'));
+
+nPerm = 0;
+if ~isempty(fsic(varargin, '--perm'))
+    nPerm = varargin{fsic(varargin, '--perm') + 1};
+end
+
+testType = 'rs';     % {'t', 'rs'} (t-test or rank-sum / signed-rank tests)
+if ~isempty(fsic(varargin, '--test'))
+    testType = varargin{fsic(varargin, '--test') + 1};
+end
 
 %%
 g_rndF1TrajChg = struct;
@@ -472,65 +501,132 @@ ylabel('Composite F12 compensation to rand. pert. (normalized)');
 
 %% Group comparison: sust. combined F1/F2 compens.
 % Perform statistical comparisons
-nPerm = 10000;
-testType = 'rs';     % {'t', 'rs'} (t-test or rank-sum / signed-rank tests)
-check_dir('perm_files', '-create');
-permMatFN = sprintf('%s_%s_perm%d_gend%s.mat', mfilename, testType, nPerm, upper(gend(1)));
-permMatFN = fullfile('perm_files', permMatFN);
+
+% check_dir('perm_files', '-create');
+% permMatFN = sprintf('%s_%s_perm%d_gend%s.mat', mfilename, testType, nPerm, upper(gend(1)));
+% permMatFN = fullfile('perm_files', permMatFN);
+% 
+% if isfile(permMatFN)
+%     load(permMatFN); 
+% else
+%     ps_wg = nan(numel(grps), size(gp_extF12Chg_shira.ANS, 2) - 1);
+%     rp_ps_wg = nan(nPerm, numel(grps), size(gp_extF12Chg_shira.ANS, 2) - 1);
+%     for i0 = 1 : 1 + nPerm    
+%         for i1 = 1 : numel(grps)
+%             grp = grps{i1};
+%             if i0 > 1
+%                 signPerm = (rand(size(gp_extF12Chg_shira.(grp), 1), 1) > 0.5) * 2 - 1;
+%                 dat = gp_extF12Chg_shira.(grp)(:, 2 : end) .* repmat(signPerm, 1, size(gp_extF12Chg_shira.(grp), 2) - 1);
+%             else
+%                 dat = gp_extF12Chg_shira.(grp)(:, 2 : end);
+%             end
+% 
+%             for i2 = 1 : size(gp_extF12Chg_shira.ANS, 2) - 1
+%                 if isequal(testType, 't')
+%                     [~, t_p] = ttest(dat(:, i2));
+%                 elseif isequal(testType, 'rs')
+%                     t_p = signrank(dat(:, i2));
+%                 end
+% 
+%                 if i0 == 1
+%                     ps_wg(i1, i2) = t_p;
+%                 else
+%                     rp_ps_wg(i0 - 1, i1, i2) = t_p;
+%                 end
+%             end
+%         end
+%     end
+% 
+%     save(permMatFN, 'rp_ps_wg', 'ps_wg');
+%     fprintf(1, 'INFO: Saved permutation data to file: %s\n', permMatFN);
+% end
+% 
+% assert(size(rp_ps_wg, 1) == nPerm);
+% min_rp_ps_wg = min(rp_ps_wg, [], 3);   
+%     
+% corr_ps_wg = nan(size(ps_wg));
+% for i1 = 1 : numel(grps)
+%     for i2 = 1 : size(gp_extF12Chg_shira.ANS, 2) - 1
+%         corr_ps_wg(i1, i2) = length(find(rp_ps_wg(:, i2) < ps_wg(i1, i2))) / nPerm;
+%     end
+% end
+
+%% Perform random permutation 
+if nPerm > 0
+    check_dir('perm_files', '-create');
+    permMatFN = fullfile('perm_files', ...
+                         sprintf('%s_%s_perm%d_gend%s.mat', mfilename, testType, nPerm, upper(gend(1))));
+end
 
 if isfile(permMatFN)
-    load(permMatFN); 
-else
-    ps_wg = nan(numel(grps), size(gp_extF12Chg_shira.ANS, 2) - 1);
-    rp_ps_wg = nan(nPerm, numel(grps), size(gp_extF12Chg_shira.ANS, 2) - 1);
-    for i0 = 1 : 1 + nPerm    
-        for i1 = 1 : numel(grps)
-            grp = grps{i1};
-            if i0 > 1
-                signPerm = (rand(size(gp_extF12Chg_shira.(grp), 1), 1) > 0.5) * 2 - 1;
-                dat = gp_extF12Chg_shira.(grp)(:, 2 : end) .* repmat(signPerm, 1, size(gp_extF12Chg_shira.(grp), 2) - 1);
-            else
-                dat = gp_extF12Chg_shira.(grp)(:, 2 : end);
-            end
-
-            for i2 = 1 : size(gp_extF12Chg_shira.ANS, 2) - 1
-                if isequal(testType, 't')
-                    [~, t_p] = ttest(dat(:, i2));
-                elseif isequal(testType, 'rs')
-                    t_p = signrank(dat(:, i2));
-                end
-
-                if i0 == 1
-                    ps_wg(i1, i2) = t_p;
-                else
-                    rp_ps_wg(i0 - 1, i1, i2) = t_p;
-                end
-            end
-        end
-    end
-
-    save(permMatFN, 'rp_ps_wg', 'ps_wg');
-    fprintf(1, 'INFO: Saved permutation data to file: %s\n', permMatFN);
-end
-
-assert(size(rp_ps_wg, 1) == nPerm);
-min_rp_ps_wg = min(rp_ps_wg, [], 3);   
+    load(permMatFN);    % gives gp_res
     
-corr_ps_wg = nan(size(ps_wg));
-for i1 = 1 : numel(grps)
-    for i2 = 1 : size(gp_extF12Chg_shira.ANS, 2) - 1
-        corr_ps_wg(i1, i2) = length(find(rp_ps_wg(:, i2) < ps_wg(i1, i2))) / nPerm;
-    end
+    assert(exist('gp_res', 'var') == 1);
+    fprintf(1, 'INFO: Loaded permutation data and results from file: %s\n', permMatFN);
+else
+    gp_res = gp_stats(gp_extF12Chg_shira, nPerm, '--test', testType);
+    save(permMatFN, 'gp_res');
+    check_file(permMatFN);
+    fprintf(1, 'INFO: Saved permutation data and results to file: %s\n', permMatFN);
 end
 
+
+%% Visualization of gp_extF12Chg_shira 
 figure('Name', 'Groups: sust.: combined F1/F2 compens.');
 hold on;
 
+horizPad = 0.05;
+NP = 4;
 for i1 = 1 : numel(grps)
     grp = grps{i1};
     
-    errorbar([1 : 4], mean(gp_extF12Chg_shira.(grp)), ste(gp_extF12Chg_shira.(grp)), ...
+    mns = mean(gp_extF12Chg_shira.(grp));
+    stes = ste(gp_extF12Chg_shira.(grp));
+    errorbar([1 : NP], mns, stes, ...
              'o-', 'Color', colors.(grp));
+         
+	for i2 = 2 : NP
+        if gp_res.corp_wg(i1, i2) < CORP_THRESH
+            fontWeight = 'bold';
+        else
+            fontWeight = 'normal';
+        end
+        text(i2 + horizPad, mns(i2), sprintf('%.3f', gp_res.corp_wg(i1, i2)), ...
+             'FontSize', fontSize * 0.7, 'Color', colors.(grp), 'FontWeight', fontWeight);
+    end       
+end
+
+gcPad = 0.2;
+for i1 = 1 : numel(gp_res.gc)
+    g1 = gp_res.gc{i1}{1};
+    g2 = gp_res.gc{i1}{2};
+    
+    ig1 = fsic(grps, g1);
+    ig2 = fsic(grps, g2);    
+    assert(length(ig1) == 1 & length(ig2) == 1);
+    
+    mn_g1 = mean(gp_extF12Chg_shira.(g1));
+    mn_g2 = mean(gp_extF12Chg_shira.(g2));
+    clr = (colors.(g1) + colors.(g2)) / 2;
+    for i2 = 2 : NP
+        plot(repmat(i2 - gcPad * i1, 1, 2), [mn_g1(i2), mn_g2(i2)], ...
+             '-', 'Color', clr);
+        plot(i2 - gcPad * [i1, i1 - 0.5], repmat(mn_g1(i2), 1, 2), ...
+             '-', 'Color', clr);
+        plot(i2 - gcPad * [i1, i1 - 0.5], repmat(mn_g2(i2), 1, 2), ...
+             '-', 'Color', clr);
+        
+        if gp_res.corp_bg(i1, i2) < CORP_THRESH
+            fontWeight = 'bold';
+        else
+            fontWeight = 'normal';
+        end
+        
+        ht = text(i2 - gcPad * (i1 + 0.3), mean([mn_g1(i2), mn_g2(i2)]) - 0.2 * (mn_g2(i2) - mn_g1(i2)), ...
+                  sprintf('%.3f', gp_res.corp_bg(i1, i2)), ...
+                  'Color', clr, 'FontSize', fontSize * 0.7, 'FontWeight', fontWeight);
+        set(ht, 'rotation', 90);
+    end
 end
 plot([0.5, 4.5], [0, 0], '-', 'Color', [0.5, 0.5, 0.5]);
 set(gca, 'XLim', [0.5, 4.5]);
@@ -556,11 +652,25 @@ ylabel('Fp adaptation');
 legend(grps, 'Location', 'Southeast');
 
 %% Correlation between SSI total score and compensation 
+meta_corr(SSI_tot, gp_extF12Chg_shira, {'CWS'}, 3, ...
+          'SSI total score', 'F12 change (Stay phase)', ...
+          colors);
+
+%% Correlation betwen age and compensation 
+meta_corr(age_mo, gp_extF12Chg_shira, {'CNS', 'CWS'}, 3, ...
+          'Age (m.o.)', 'F12 change (Stay phase)', ...
+          colors);
+
 figure;
-plot(SSI_tot.CWS, gp_extF12Chg_shira.CWS(:, 3), 'o');
-xlabel('SSI total score');
+hold on;
+plot(age_mo.CNS, gp_extF12Chg_shira.CNS(:, 3), 'o', 'Color', colors.CNS);
+plot(age_mo.CWS, gp_extF12Chg_shira.CWS(:, 3), 'o', 'Color', colors.CWS);
+grid on; box on;
+legend({'CNS', 'CWS'});
+
+xlabel('Age (mo)');
 ylabel('F12 change (Stay phase)');
-grid on;
+
 
 %% Write data to an xls file, which can be used by other stats software, e.g., SPSS, SYSTAT
 if ~bNoXLS
